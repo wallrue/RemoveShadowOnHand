@@ -20,35 +20,34 @@ class BaseDataset(data.Dataset):
     def __len__(self):
         return 0
 
+    def get_transform(self, opt):
+        transform_list = []
+        if opt.resize_or_crop == 'resize_and_crop': # resize to loadSize and crop to fineSize
+            osize = [opt.loadSize, opt.loadSize]
+            transform_list.append(transforms.Resize(osize, Image.BICUBIC))
+            transform_list.append(transforms.RandomCrop(opt.fineSize))
+        elif opt.resize_or_crop == 'crop': # crop to fineSize
+            transform_list.append(transforms.RandomCrop(opt.fineSize))
+        elif opt.resize_or_crop == 'scale_width': # scale to fineSize for width only
+            transform_list.append(transforms.Lambda(
+                lambda img: __scale_width(img, opt.fineSize)))
+        elif opt.resize_or_crop == 'scale_width_and_crop': # scale to fineSize for width only and crop to fineSize
+            transform_list.append(transforms.Lambda(
+                lambda img: __scale_width(img, opt.loadSize)))
+            transform_list.append(transforms.RandomCrop(opt.fineSize))
+        elif opt.resize_or_crop == 'none': # just modify the width and height to be multiple of 4
+            transform_list.append(transforms.Lambda(
+                lambda img: __adjust(img)))
+        else:
+            raise ValueError('--resize_or_crop %s is not a valid option.' % opt.resize_or_crop)
 
-def get_transform(opt):
-    transform_list = []
-    if opt.resize_or_crop == 'resize_and_crop': # resize to loadSize and crop to fineSize
-        osize = [opt.loadSize, opt.loadSize]
-        transform_list.append(transforms.Resize(osize, Image.BICUBIC))
-        transform_list.append(transforms.RandomCrop(opt.fineSize))
-    elif opt.resize_or_crop == 'crop': # crop to fineSize
-        transform_list.append(transforms.RandomCrop(opt.fineSize))
-    elif opt.resize_or_crop == 'scale_width': # scale to fineSize for width only
-        transform_list.append(transforms.Lambda(
-            lambda img: __scale_width(img, opt.fineSize)))
-    elif opt.resize_or_crop == 'scale_width_and_crop': # scale to fineSize for width only and crop to fineSize
-        transform_list.append(transforms.Lambda(
-            lambda img: __scale_width(img, opt.loadSize)))
-        transform_list.append(transforms.RandomCrop(opt.fineSize))
-    elif opt.resize_or_crop == 'none': # just modify the width and height to be multiple of 4
-        transform_list.append(transforms.Lambda(
-            lambda img: __adjust(img)))
-    else:
-        raise ValueError('--resize_or_crop %s is not a valid option.' % opt.resize_or_crop)
+        if opt.isTrain and not opt.no_flip: # flip if running in training time only
+            transform_list.append(transforms.RandomHorizontalFlip())
 
-    if opt.isTrain and not opt.no_flip: # flip if running in training time only
-        transform_list.append(transforms.RandomHorizontalFlip())
-
-    transform_list += [transforms.ToTensor(),
-                       transforms.Normalize((0.5, 0.5, 0.5),
-                                            (0.5, 0.5, 0.5))]
-    return transforms.Compose(transform_list)
+        transform_list += [transforms.ToTensor(),
+                           transforms.Normalize((0.5, 0.5, 0.5),
+                                                (0.5, 0.5, 0.5))]
+        return transforms.Compose(transform_list)
 
 
 # just modify the width and height to be multiple of 4
