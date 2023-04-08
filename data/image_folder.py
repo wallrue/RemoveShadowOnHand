@@ -44,7 +44,7 @@ def make_dataset(dir):
                 path = os.path.join(root, fname)
                 images.append(path)
                 imname.append(fname)
-    return images,imname
+    return images, imname
 
 def default_loader(path):
     return Image.open(path).convert('RGB')

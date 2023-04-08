@@ -23,26 +23,26 @@ class BaseDataset(data.Dataset):
 
 def get_transform(opt):
     transform_list = []
-    if opt.resize_or_crop == 'resize_and_crop':
+    if opt.resize_or_crop == 'resize_and_crop': # resize to loadSize and crop to fineSize
         osize = [opt.loadSize, opt.loadSize]
         transform_list.append(transforms.Resize(osize, Image.BICUBIC))
         transform_list.append(transforms.RandomCrop(opt.fineSize))
-    elif opt.resize_or_crop == 'crop':
+    elif opt.resize_or_crop == 'crop': # crop to fineSize
         transform_list.append(transforms.RandomCrop(opt.fineSize))
-    elif opt.resize_or_crop == 'scale_width':
+    elif opt.resize_or_crop == 'scale_width': # scale to fineSize for width only
         transform_list.append(transforms.Lambda(
             lambda img: __scale_width(img, opt.fineSize)))
-    elif opt.resize_or_crop == 'scale_width_and_crop':
+    elif opt.resize_or_crop == 'scale_width_and_crop': # scale to fineSize for width only and crop to fineSize
         transform_list.append(transforms.Lambda(
             lambda img: __scale_width(img, opt.loadSize)))
         transform_list.append(transforms.RandomCrop(opt.fineSize))
-    elif opt.resize_or_crop == 'none':
+    elif opt.resize_or_crop == 'none': # just modify the width and height to be multiple of 4
         transform_list.append(transforms.Lambda(
             lambda img: __adjust(img)))
     else:
         raise ValueError('--resize_or_crop %s is not a valid option.' % opt.resize_or_crop)
 
-    if opt.isTrain and not opt.no_flip:
+    if opt.isTrain and not opt.no_flip: # flip if running in training time only
         transform_list.append(transforms.RandomHorizontalFlip())
 
     transform_list += [transforms.ToTensor(),
@@ -55,9 +55,6 @@ def get_transform(opt):
 def __adjust(img):
     ow, oh = img.size
 
-    # the size needs to be a multiple of this number,
-    # because going through generator network may change img size
-    # and eventually cause size mismatch error
     mult = 4
     if ow % mult == 0 and oh % mult == 0:
         return img
@@ -75,18 +72,17 @@ def __adjust(img):
 def __scale_width(img, target_width):
     ow, oh = img.size
 
-    # the size needs to be a multiple of this number,
-    # because going through generator network may change img size
-    # and eventually cause size mismatch error
+    # the image size needs to be a multiple of 4
     mult = 4
     assert target_width % mult == 0, "the target width needs to be multiple of %d." % mult
     if (ow == target_width and oh % mult == 0):
         return img
     w = target_width
     target_height = int(target_width * oh / ow)
+    
+    # check the compatibility of height and weight after being scaled
     m = (target_height - 1) // mult
     h = (m + 1) * mult
-
     if target_height != h:
         __print_size_warning(target_width, target_height, w, h)
 

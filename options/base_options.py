@@ -12,12 +12,17 @@ class BaseOptions():
 
     def initialize(self, parser):
         parser.add_argument('--dataroot',  help='path to images')
-        parser.add_argument('--num_threads', default=2, type=int, help='# threads for loading data')
+        parser.add_argument('--num_threads', default=2, type=int, help='# threads for loading data, num_workers')
         parser.add_argument('--batch_size', type=int, default=1, help='input batch size')
+        
         parser.add_argument('--loadSize', type=int, default=256, help='scale images to this size')
         parser.add_argument('--fineSize', type=int, default=256, help='then crop to this size')
         parser.add_argument('--input_nc', type=int, default=3, help='channels of input image')
         parser.add_argument('--output_nc', type=int, default=3, help='channels of output image')
+        
+#         parser.add_argument('--keep_ratio', action='store_true')
+#         parser.add_argument('--norm_mean', type=list, default=[0.5,0.5,0.5])
+#         parser.add_argument('--norm_std', type=list, default=[0.5,0.5,0.5])
         
         parser.add_argument('--ngf', type=int, default=64, help='# of gen filters in first conv layer')
         parser.add_argument('--ndf', type=int, default=64, help='# of discrim filters in first conv layer')
@@ -40,9 +45,6 @@ class BaseOptions():
         parser.add_argument('--lambda_GAN', type=float, default=0.0)
         parser.add_argument('--lambda_smooth', type=float, default=0.0)
         parser.add_argument('--lambda_L1', type=float, default=0.0)
-        parser.add_argument('--keep_ratio', action='store_true')
-        parser.add_argument('--norm_mean', type=list, default=[0.5,0.5,0.5])
-        parser.add_argument('--norm_std', type=list, default=[0.5,0.5,0.5])
         parser.add_argument('--finetuning', action='store_true')
         parser.add_argument('--finetuning_name', type=str)
         parser.add_argument('--finetuning_epoch', type=str)
