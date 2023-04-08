@@ -16,8 +16,7 @@ class ShadowParamDataset(BaseDataset):
         self.dir_A = os.path.join(opt.dataroot, opt.phase + 'A')
         self.dir_B = os.path.join(opt.dataroot, opt.phase + 'B')
         self.dir_C = os.path.join(opt.dataroot, opt.phase + 'C')
-        self.dir_param = os.path.join(opt.dataroot, opt.phase + 'param')
-        #self.dir_param = opt.param_path
+        self.dir_param = opt.param_path
         self.dir_matte = os.path.join(opt.dataroot, 'matte')
         
         self.A_paths, self.imname = make_dataset(self.dir_A)
@@ -27,8 +26,7 @@ class ShadowParamDataset(BaseDataset):
 #         transform_list = [transforms.ToTensor(),
 #                           transforms.Normalize(mean=opt.norm_mean,
 #                                                std = opt.norm_std)]
-
-        self.transformData = get_transform(opt) #transforms.Compose(transform_list)
+        self.transformData = transforms.Compose(get_transform(opt)) #transforms.Compose(transform_list)
         #self.transformB = transforms.Compose([transforms.ToTensor()])
      
     def __getitem__(self,index):

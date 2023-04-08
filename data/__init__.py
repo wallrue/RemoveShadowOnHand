@@ -1,7 +1,7 @@
 import importlib
 import torch.utils.data
 from data.base_data_loader import BaseDataLoader
-from data.base_dataset import BaseDataset
+from data.base_dataset import BaseDataset, get_transform
 
 def find_dataset_using_name(dataset_name):
     dataset_filename = "data." + dataset_name + "_dataset"
@@ -51,6 +51,7 @@ class CustomDatasetDataLoader(BaseDataLoader):
 
     def __iter__(self):
         for i, data in enumerate(self.dataloader):
+            print("Shape: ", np.shape(data))
             if i * self.opt.batch_size >= self.opt.max_dataset_size:
                 break
             yield data
