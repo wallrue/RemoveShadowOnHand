@@ -28,7 +28,7 @@ class ShadowParamDataset(BaseDataset):
 #                           transforms.Normalize(mean=opt.norm_mean,
 #                                                std = opt.norm_std)]
 
-        self.transformA = get_transform(opt) #transforms.Compose(transform_list)
+        self.transform = get_transform(opt) #transforms.Compose(transform_list)
         #self.transformB = transforms.Compose([transforms.ToTensor()])
      
     def __getitem__(self,index):
@@ -119,9 +119,11 @@ class ShadowParamDataset(BaseDataset):
 #         for k,im in birdy.items():
 #             birdy[k] = im.type(torch.FloatTensor)
             
-        birdy['A'] = self.transform(A_img)
-        birdy['B'] = self.transform(B_img)
-        birdy['C'] = self.transform(C_img) 
+        birdy['A'] = A_img
+        birdy['B'] = B_img
+        birdy['C'] = C_img
+        for k,im in birdy.items():
+            birdy[k] = self.transform(im)
         
         birdy['imname'] = imname
         birdy['w'] = ow
