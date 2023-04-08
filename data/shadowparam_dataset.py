@@ -1,6 +1,7 @@
 import os.path
 import torchvision.transforms as transforms
-from data.base_dataset import BaseDataset, get_transform
+from data.base_dataset import BaseDataset
+from data.transform import get_transform
 from data.image_folder import make_dataset
 from PIL import Image,ImageChops
 from PIL import ImageFilter
@@ -9,6 +10,7 @@ from pdb import set_trace as st
 import random
 import numpy as np
 import time
+
 class ShadowParamDataset(BaseDataset):
     def initialize(self, opt):
         self.opt = opt
@@ -120,23 +122,22 @@ class ShadowParamDataset(BaseDataset):
         birdy['A'] = A_img
         birdy['B'] = B_img
         birdy['C'] = C_img
-#         for k,im in birdy.items():
-#             birdy[k] = self.transformData(im)
-#             print(np.shape(im), "-", np.shape(birdy[k]))
+        for k,im in birdy.items():
+            birdy[k] = self.transformData(im)
 
-        for k,im in birdy.items():
-            birdy[k] = im.resize((self.opt.loadSize, self.opt.loadSize),Image.NEAREST)
+#         for k,im in birdy.items():
+#             birdy[k] = im.resize((self.opt.loadSize, self.opt.loadSize),Image.NEAREST)
             
-        for k,im in birdy.items():
-            birdy[k] = self.transformB(im)
-        for i in ['A','C','B']:
-            if i in birdy:
-                birdy[i] = (birdy[i] - 0.5)*2  
+#         for k,im in birdy.items():
+#             birdy[k] = self.transformB(im)
+#         for i in ['A','C','B']:
+#             if i in birdy:
+#                 birdy[i] = (birdy[i] - 0.5)*2  
             
-        w_offset = random.randint(0,max(0,w-self.opt.fineSize-1))
-        h_offset = random.randint(0,max(0,h-self.opt.fineSize-1))
-        for k,im in birdy.items():   
-            birdy[k] = im[:, h_offset:h_offset + self.opt.fineSize, w_offset:w_offset + self.opt.fineSize]
+#         w_offset = random.randint(0,max(0,w-self.opt.fineSize-1))
+#         h_offset = random.randint(0,max(0,h-self.opt.fineSize-1))
+#         for k,im in birdy.items():   
+#             birdy[k] = im[:, h_offset:h_offset + self.opt.fineSize, w_offset:w_offset + self.opt.fineSize]
         
         birdy['imname'] = imname
         birdy['w'] = ow
