@@ -10,9 +10,9 @@ class BaseDataset(data.Dataset):
     def name(self):
         return 'BaseDataset'
 
-    @staticmethod
-    def modify_commandline_options(parser, is_train):
-        return parser
+#     @staticmethod
+#     def modify_commandline_options(parser, is_train):
+#         return parser
 
     def initialize(self, opt):
         pass

@@ -84,29 +84,28 @@ class BaseOptions():
     def gather_options(self):
         # initialize parser with basic options
         if not self.initialized:
-            parser = argparse.ArgumentParser(
+            self.parser = argparse.ArgumentParser(
                 formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-            parser = self.initialize(parser)
+            self.parser = self.initialize(parser)
 
         # get the basic options
         #opt, _ = parser.parse_known_args()
-        opt = self.get_known(parser)
+        opt = self.get_known(self.parser)
 
         # modify model-related parser options
-        model_name = opt.model
-        model_option_setter = models.get_option_setter(model_name)
-        parser = model_option_setter(parser, self.isTrain)
-        opt = self.get_known(parser)
+#         model_name = opt.model
+#         model_option_setter = models.get_option_setter(model_name)
+#         parser = model_option_setter(parser, self.isTrain)
+#         opt = self.get_known(parser)
         #opt, _ = parser.parse_known_args()  # parse again with the new defaults
 
         # modify dataset-related parser options
-        dataset_name = opt.dataset_mode
-        dataset_option_setter = data.get_option_setter(dataset_name)
-        parser = dataset_option_setter(parser, self.isTrain)
+#         dataset_name = opt.dataset_mode
+#         dataset_option_setter = data.get_option_setter(dataset_name)
+#         parser = dataset_option_setter(parser, self.isTrain)
         
-        self.parser = parser
         
-        args, unknown = parser.parse_known_args()
+        args, unknown = self.parser.parse_known_args()
 
         return args
 
