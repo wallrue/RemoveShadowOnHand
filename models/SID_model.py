@@ -15,7 +15,6 @@ class SIDModel(DistangleModel):
 
     @staticmethod
     def modify_commandline_options(parser, is_train=True):
-
         parser.set_defaults(pool_size=0, no_lsgan=True, norm='batch')
         parser.set_defaults(dataset_mode='shadowparam') #'aligned')
         parser.add_argument('--wdataroot',default='None',  help='path to images (should have subfolders trainA, trainB, valA, valB, etc)')
@@ -70,7 +69,6 @@ class SIDModel(DistangleModel):
         self.shadow_mask_3d= (self.shadow_mask>0).type(torch.float).expand(self.input_img.shape)   
         if 'isreal' in input:
             self.isreal = input['isreal']
-
     
     def forward(self):
         inputG = torch.cat([self.input_img,self.shadow_mask],1)
@@ -114,8 +112,6 @@ class SIDModel(DistangleModel):
         self.final = (self.input_img/2+0.5)*(1-self.alpha_pred) + self.lit*(self.alpha_pred)
         self.final = self.final*2-1
 
-
-
     def backward(self):
         criterion = self.criterionL1 
         lambda_ = self.opt.lambda_L1 
@@ -126,8 +122,6 @@ class SIDModel(DistangleModel):
         self.loss = self.loss_rescontruction + self.loss_G_param
         self.loss.backward()
     
-
-
     def optimize_parameters(self):
         self.forward()
         self.optimizer_G.zero_grad()
@@ -135,7 +129,6 @@ class SIDModel(DistangleModel):
         self.backward()
         self.optimizer_G.step()
         self.optimizer_M.step()
-    
     
     def get_current_visuals(self):
         t= time.time()
@@ -162,8 +155,6 @@ class SIDModel(DistangleModel):
         
         allim = np.vstack(all)
         return OrderedDict([(self.opt.name,allim)])
-    
-    
     
     def get_prediction(self,input):
         self.input_img = input['A'].to(self.device)

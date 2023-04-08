@@ -2,3 +2,4 @@ ST-SID-Net_old.ipynb
 infer.py
 
 .ipynb_checkpoints/
+/__pycache__/
