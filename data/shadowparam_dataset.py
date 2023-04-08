@@ -1,6 +1,6 @@
 import os.path
 import torchvision.transforms as transforms
-from data.base_dataset import BaseDataset
+from data.base_dataset import BaseDataset, get_transform
 from data.image_folder import make_dataset
 from PIL import Image,ImageChops
 from PIL import ImageFilter
@@ -28,7 +28,7 @@ class ShadowParamDataset(BaseDataset):
 #                           transforms.Normalize(mean=opt.norm_mean,
 #                                                std = opt.norm_std)]
 
-        self.transform = self.get_transform(opt) #transforms.Compose(transform_list)
+        self.transformData = get_transform(opt) #transforms.Compose(transform_list)
         #self.transformB = transforms.Compose([transforms.ToTensor()])
      
     def __getitem__(self,index):
@@ -123,7 +123,7 @@ class ShadowParamDataset(BaseDataset):
         birdy['B'] = B_img
         birdy['C'] = C_img
         for k,im in birdy.items():
-            birdy[k] = self.transform(im)
+            birdy[k] = self.transformData(im)
         
         birdy['imname'] = imname
         birdy['w'] = ow
