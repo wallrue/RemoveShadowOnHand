@@ -122,6 +122,7 @@ class ShadowParamDataset(BaseDataset):
         birdy['C'] = C_img
         for k,im in birdy.items():
             birdy[k] = self.transformData(im)
+            print(np.shape(im), "-", np.shape(birdy[k]))
         
         birdy['imname'] = imname
         birdy['w'] = ow

@@ -51,7 +51,6 @@ class CustomDatasetDataLoader(BaseDataLoader):
 
     def __iter__(self):
         for i, data in enumerate(self.dataloader):
-            print("Shape: ", np.shape(data))
             if i * self.opt.batch_size >= self.opt.max_dataset_size:
                 break
             yield data
