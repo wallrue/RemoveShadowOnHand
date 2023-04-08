@@ -27,7 +27,7 @@ class ShadowParamDataset(BaseDataset):
 #                           transforms.Normalize(mean=opt.norm_mean,
 #                                                std = opt.norm_std)]
         self.transformData = transforms.Compose(get_transform(opt)) #transforms.Compose(transform_list)
-        #self.transformB = transforms.Compose([transforms.ToTensor()])
+        self.transformB = transforms.Compose([transforms.ToTensor()])
      
     def __getitem__(self,index):
         birdy = {}
@@ -120,9 +120,23 @@ class ShadowParamDataset(BaseDataset):
         birdy['A'] = A_img
         birdy['B'] = B_img
         birdy['C'] = C_img
+#         for k,im in birdy.items():
+#             birdy[k] = self.transformData(im)
+#             print(np.shape(im), "-", np.shape(birdy[k]))
+
         for k,im in birdy.items():
-            birdy[k] = self.transformData(im)
-            print(np.shape(im), "-", np.shape(birdy[k]))
+            birdy[k] = im.resize((self.opt.loadSize, self.opt.loadSize),Image.NEAREST)
+            
+        for k,im in birdy.items():
+            birdy[k] = self.transformB(im)
+        for i in ['A','C','B']:
+            if i in birdy:
+                birdy[i] = (birdy[i] - 0.5)*2  
+            
+        w_offset = random.randint(0,max(0,w-self.opt.fineSize-1))
+        h_offset = random.randint(0,max(0,h-self.opt.fineSize-1))
+        for k,im in birdy.items():   
+            birdy[k] = im[:, h_offset:h_offset + self.opt.fineSize, w_offset:w_offset + self.opt.fineSize]
         
         birdy['imname'] = imname
         birdy['w'] = ow
