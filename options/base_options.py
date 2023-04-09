@@ -11,18 +11,21 @@ class BaseOptions():
         self.initialized = False
 
     def initialize(self, parser):
-        parser.add_argument('--dataroot',  help='path to images')
-        parser.add_argument('--num_threads', default=2, type=int, help='# threads for loading data, num_workers')
+        
+        # data loader argument
+        parser.add_argument('--dataroot',  help='path to dataset')
+        parser.add_argument('--dataset_mode', type=str, default='single', help='chooses kind of dataset loader. [single, shadowparam]')
+        parser.add_argument('--num_threads', type=int, default=2, help='# threads for loading data, num_workers')
         parser.add_argument('--batch_size', type=int, default=1, help='input batch size')
         
+        # data transform argument
         parser.add_argument('--loadSize', type=int, default=256, help='scale images to this size')
         parser.add_argument('--fineSize', type=int, default=256, help='then crop to this size')
+        
+        
+        
         parser.add_argument('--input_nc', type=int, default=3, help='channels of input image')
         parser.add_argument('--output_nc', type=int, default=3, help='channels of output image')
-        
-#         parser.add_argument('--keep_ratio', action='store_true')
-#         parser.add_argument('--norm_mean', type=list, default=[0.5,0.5,0.5])
-#         parser.add_argument('--norm_std', type=list, default=[0.5,0.5,0.5])
         
         parser.add_argument('--ngf', type=int, default=64, help='# of gen filters in first conv layer')
         parser.add_argument('--ndf', type=int, default=64, help='# of discrim filters in first conv layer')
@@ -32,7 +35,7 @@ class BaseOptions():
         
         parser.add_argument('--gpu_ids', type=str, default='0', help='gpu ids: e.g. 0  0,1,2, 0,2. use -1 for CPU')
         #parser.add_argument('--name', type=str, default='experiment_name', help='name of the experiment. It decides where to store samples and models')
-        parser.add_argument('--dataset_mode', type=str, default='single', help='chooses how datasets are loaded. [unaligned | aligned | single]')
+
         parser.add_argument('--model', type=str, help='chooses which model to use. cycle_gan, pix2pix, test')
         #parser.add_argument('--direction', type=str, default='AtoB', help='AtoB or BtoA')
         parser.add_argument('--epoch', type=str, default='latest', help='which epoch to load? set to latest to use latest cached model')
@@ -75,8 +78,6 @@ class BaseOptions():
         
         parser.set_defaults(checkpoints_dir="C:/Users/m1101/Downloads/Shadow_Removal/SID/_Git_SID/checkpoints_PAMI/")
         parser.set_defaults(dataroot='C:/Users/m1101/Downloads/Shadow_Removal/SID/_Git_SID/data_processing/dataset/NTUST_TU/train/')
-        parser.set_defaults(mask_train='C:/Users/m1101/Downloads/Shadow_Removal/SID/_Git_SID/data_processing/dataset/NTUST_TU/train/' + 'train_B')
-        parser.set_defaults(param_path='C:/Users/m1101/Downloads/Shadow_Removal/SID/_Git_SID/data_processing/dataset/NTUST_TU/train/' + 'train_params')
         
         args, unknown = parser.parse_known_args()
         return args

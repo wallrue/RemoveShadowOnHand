@@ -77,6 +77,17 @@ class Scale(object):
             output = img.resize((ow, oh), self.interpolation)
             
         return output
+
+class RandomHorizontalFlip(object):
+    """Randomly horizontally flips the given PIL.Image with a probability of 0.5"""
+
+    def __call__(self, img):
+        flag = random.random() < 0.5
+        if flag:
+            output = img.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
+        else:
+            output = img
+        return output
     
 class Normalize(object):
     """Given mean: (R, G, B) and std: (R, G, B),
@@ -92,7 +103,7 @@ class Normalize(object):
         tensor = (tensor - self.mean)/self.std
         return tensor
     
-def get_transform(opt):
+def get_transform_list(opt):
     transform_list = []
     if opt.resize_or_crop == 'resize_and_crop': # resize to loadSize and crop to fineSize
         transform_list.append(Resize(opt.loadSize))
@@ -109,9 +120,11 @@ def get_transform(opt):
     else:
         raise ValueError('--resize_or_crop %s is not a valid option.' % opt.resize_or_crop)
 
-    if opt.isTrain and not opt.no_flip: # flip if running in training time only
-        transform_list.append(transforms.RandomHorizontalFlip())
+    # training time configuration
+    if opt.isTrain:
+        if not opt.no_flip:
+            transform_list.append(RandomHorizontalFlip())
 
     transform_list += [transforms.ToTensor(),
                        transforms.Normalize(0.5, 0.5)]
-    return transform_list #transforms.Compose(transform_list)
+    return transform_list
