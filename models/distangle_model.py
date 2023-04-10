@@ -126,32 +126,32 @@ class DistangleModel(BaseModel):
         self.optimizer_G.step()
 
 
-if __name__=='__main__':
-    parser = argparse.ArgumentParser()
-    opt = parser.parse_args()
-    opt.dataroot = '=/nfs/bigbox/hieule/GAN/datasets/ISTD_Dataset/train/train_'
-    opt.name = 'test'
-    opt.model = 'jointdistangle'
+# if __name__=='__main__':
+#     parser = argparse.ArgumentParser()
+#     opt = parser.parse_args()
+#     opt.dataroot = '=/nfs/bigbox/hieule/GAN/datasets/ISTD_Dataset/train/train_'
+#     opt.name = 'test'
+#     opt.model = 'jointdistangle'
 
-    opt.gpu_ids=[2]
-    opt.log_scale = 0
-    opt.ndf = 32
-    opt.ngf = 64
-    opt.norm ='batch'
-    opt.checkpoints_dir ='/nfs/bigbox/hieule/GAN/data/test'  
-    opt.isTrain = False
-    opt.resize_or_crop = 'none'
-    opt.loadSize = 256
-    opt.init_type = 'xavier'
-    opt.init_gain = 0.02
-    opt.fineSize = 256
-    opt.nThreads = 1   # test code only supports nThreads = 1
-    opt.batchSize = 1  # test code only supports batchSize = 1
-    opt.serial_batches = False  # no shuffle
-    opt.no_flip = True  # no flip
-    opt.no_dropout = True
-    opt.use_our_mask = True
-    opt.task ='sr'
+#     opt.gpu_ids=[2]
+#     opt.log_scale = 0
+#     opt.ndf = 32
+#     opt.ngf = 64
+#     opt.norm ='batch'
+#     opt.checkpoints_dir ='/nfs/bigbox/hieule/GAN/data/test'  
+#     opt.isTrain = False
+#     opt.resize_or_crop = 'none'
+#     opt.loadSize = 256
+#     opt.init_type = 'xavier'
+#     opt.init_gain = 0.02
+#     opt.fineSize = 256
+#     opt.nThreads = 1   # test code only supports nThreads = 1
+#     opt.batchSize = 1  # test code only supports batchSize = 1
+#     opt.serial_batches = False  # no shuffle
+#     opt.no_flip = True  # no flip
+#     opt.no_dropout = True
+#     opt.use_our_mask = True
+#     opt.task ='sr'
 
-    a = DistangleModel()
-    a.initialize(opt)
+#     a = DistangleModel()
+#     a.initialize(opt)

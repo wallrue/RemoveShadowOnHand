@@ -153,10 +153,13 @@ class SIDModel(DistangleModel):
 #         allim = np.vstack(all)
 #         return OrderedDict([(self.opt.name,allim)])
     
-    def get_prediction(self,input):
-        self.input_img = input['A'].to(self.device)
-        self.shadow_mask = input['B'].to(self.device)
-        self.shadow_mask = (self.shadow_mask>0.9).type(torch.float)*2-1
+    def get_prediction(self,input_img, shadow_mask):
+        # self.input_img = input['A'].to(self.device)
+        # self.shadow_mask = input['B'].to(self.device)
+        # self.shadow_mask = (self.shadow_mask>0.9).type(torch.float)*2-1
+        
+        self.input_img = input_img.to(self.device)
+        self.shadow_mask = shadow_mask.to(self.device)
         self.shadow_mask_3d= (self.shadow_mask>0).type(torch.float).expand(self.input_img.shape)   
         
         w = self.input_img.shape[2]

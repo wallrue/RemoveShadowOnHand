@@ -22,38 +22,39 @@ class BaseOptions():
         parser.add_argument('--loadSize', type=int, default=256, help='scale images to this size')
         parser.add_argument('--fineSize', type=int, default=256, help='then crop to this size')
         
+        # model setup
         parser.add_argument('--checkpoints_dir', type=str, default='../checkpoints', help='models are saved here')
         parser.add_argument('--name', type=str, default='experiment_name', help='name of the experiment as well as name of checkpoint sub-folder')
+        parser.add_argument('--suffix', default='', type=str, help='customized suffix: opt.name = opt.name + suffix: e.g., {model}_{netG}_size{loadSize}')
         
+        parser.add_argument('--input_nc', type=int, default=3, help='channels of input image')
+        parser.add_argument('--output_nc', type=int, default=3, help='channels of output image')
+        parser.add_argument('--ngf', type=int, default=64, help='# of gen filters in first conv layer')
+        parser.add_argument('--ndf', type=int, default=64, help='# of discrim filters in first conv layer')
+        parser.add_argument('--model', type=str, help='chooses which model to use. cycle_gan, pix2pix, test')
+        parser.add_argument('--netD', type=str, default='basic', help='selects model to use for netD')
+        parser.add_argument('--netG', type=str, default='resnet_9blocks', help='selects model to use for netG')
         
+        # training setup
+        parser.add_argument('--epoch', type=str, default='latest', help='which epoch to load? set to latest to use latest cached model')
         parser.add_argument('--gpu_ids', type=str, default='0', help='gpu ids: e.g. 0  0,1,2, 0,2. use -1 for CPU')
         parser.add_argument('--lambda_GAN', type=float, default=0.0)
         parser.add_argument('--lambda_smooth', type=float, default=0.0)
         parser.add_argument('--lambda_L1', type=float, default=0.0)
-        
-        
-        
-        parser.add_argument('--input_nc', type=int, default=3, help='channels of input image')
-        parser.add_argument('--output_nc', type=int, default=3, help='channels of output image')
-        
-        parser.add_argument('--ngf', type=int, default=64, help='# of gen filters in first conv layer')
-        parser.add_argument('--ndf', type=int, default=64, help='# of discrim filters in first conv layer')
-        parser.add_argument('--netD', type=str, default='basic', help='selects model to use for netD')
-        parser.add_argument('--netG', type=str, default='resnet_9blocks', help='selects model to use for netG')
-        parser.add_argument('--n_layers_D', type=int, default=3, help='only used if netD==n_layers')
-        
-
-
-
-        parser.add_argument('--model', type=str, help='chooses which model to use. cycle_gan, pix2pix, test')
-        #parser.add_argument('--direction', type=str, default='AtoB', help='AtoB or BtoA')
-        parser.add_argument('--epoch', type=str, default='latest', help='which epoch to load? set to latest to use latest cached model')
-
-        parser.add_argument('--suffix', default='', type=str, help='customized suffix: opt.name = opt.name + suffix: e.g., {model}_{netG}_size{loadSize}')
-        
         parser.add_argument('--init_type', type=str, default='xavier', help='network initialization [normal|xavier|kaiming|orthogonal]')
         parser.add_argument('--init_gain', type=float, default=0.02, help='scaling factor for normal, xavier and orthogonal.')
-        parser.add_argument('--verbose', action='store_true', help='if specified, print more debugging information')
+        #parser.add_argument('--verbose', action='store_true', help='if specified, print more debugging information')       
+        
+        
+
+        
+        
+        parser.add_argument('--n_layers_D', type=int, default=3, help='only used if netD==n_layers')
+        #parser.add_argument('--direction', type=str, default='AtoB', help='AtoB or BtoA')
+
+
+        
+
 
         # parser.add_argument('--finetuning', action='store_true')
         # parser.add_argument('--finetuning_name', type=str)
@@ -76,7 +77,7 @@ class BaseOptions():
         parser.set_defaults(phase='train_')
         parser.set_defaults(gpu_ids='0')
         parser.set_defaults(dataset_mode='shadowparam')
-        parser.set_defaults(save_epoch_freq=2)
+        # parser.set_defaults(save_epoch_freq=2)
         
         parser.set_defaults(niter=10)
         parser.set_defaults(niter_decay=40)
