@@ -14,7 +14,7 @@ class ShadowParamDataset(BaseDataset):
         self.dir_A = os.path.join(opt.dataroot, opt.phase + 'A')
         self.dir_B = os.path.join(opt.dataroot, opt.phase + 'B')
         self.dir_C = os.path.join(opt.dataroot, opt.phase + 'C')
-        self.dir_param = os.path.join(opt.dataroot, opt.phase + 'train_params')
+        self.dir_param = os.path.join(opt.dataroot, opt.phase + 'params')
         self.dir_matte = os.path.join(opt.dataroot, 'matte')
         
         self.A_paths, self.imname = make_dataset(self.dir_A)
