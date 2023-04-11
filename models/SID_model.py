@@ -149,7 +149,7 @@ class SIDModel(DistangleModel):
         self.final = self.final*2-1
 
         RES = dict()
-        RES['final']= util.tensor2im(self.final,scale =0)
+        RES['final']= self.final #util.tensor2im(self.final,scale =0)
         #RES['phase1'] = util.tensor2im(self.out,scale =0)
         #RES['param']= self.shadow_param_pred.detach().cpu() 
         #RES['matte'] = util.tensor2im(self.alpha_pred.detach().cpu()/2,scale =0)

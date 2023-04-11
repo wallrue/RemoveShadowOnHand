@@ -31,7 +31,7 @@ class CustomDatasetDataLoader(BaseDataLoader):
         return 'CustomDatasetDataLoader'
 
     def __init__(self, opt):
-        BaseDataLoader.initialize(self, opt)
+        BaseDataLoader.__init__(self, opt)
         self.dataset = create_dataset(opt)
         self.dataloader = torch.utils.data.DataLoader(
             self.dataset,

@@ -57,9 +57,9 @@ class BaseModel():
         pass
     
     def get_prediction(self, input):
-        self.input_img = input['A']..to(self.device)
-        self.shadow_mask = input['B']..to(self.device)
-        self.shadow_mask = (self.shadow_mask>0.9).type(torch.float)*2-1_i
+        self.input_img = input['A'].to(self.device)
+        self.shadow_mask = input['B'].to(self.device)
+        self.shadow_mask = (self.shadow_mask>0.9).type(torch.float)*2-1
         self.shadow_mask_3d = (self.shadow_mask>0).type(torch.float).expand(self.inputmg.shape)   
         
         inputG = torch.cat([self.input_img,self.shadow_mask],1)
@@ -67,15 +67,15 @@ class BaseModel():
         return util.tensor2im(out)
 
     # load and print networks; create schedulers
-#     def setup(self, opt, parser=None):
-#         print(self.name)
-#         if self.isTrain:
-#             self.schedulers = [networks.get_scheduler(optimizer, opt) for optimizer in self.optimizers]
+    def setup(self, opt, parser=None):
+        print(self.name)
+        if self.isTrain:
+            self.schedulers = [networks.get_scheduler(optimizer, opt) for optimizer in self.optimizers]
 
-#         if not self.isTrain: # or opt.continue_train or opt.finetuning:
-#             print("LOADING %s"%(self.name))
-#             self.load_networks(opt.epoch)
-#         self.print_networks() #opt.verbose)
+        if not self.isTrain: # or opt.continue_train or opt.finetuning:
+            print("LOADING %s"%(self.name))
+            self.load_networks(opt.epoch)
+        self.print_networks() #opt.verbose)
 
     # used in test time, wrapping `forward` in no_grad() so we don't save
     # intermediate steps for backprop

@@ -16,11 +16,11 @@ class BaseOptions():
         parser.add_argument('--dataroot',  help='path to dataset')
         parser.add_argument('--dataset_mode', type=str, default='single', help='chooses kind of dataset loader. [single, shadowparam]')
         parser.add_argument('--num_threads', type=int, default=2, help='# threads for loading data, num_workers')
-        parser.add_argument('--batch_size', type=int, default=1, help='input batch size')
+        parser.add_argument('--batch_size', type=int, default=2, help='input batch size')
         
         # data transform argument
         parser.add_argument('--loadSize', type=int, default=256, help='scale images to this size')
-        parser.add_argument('--fineSize', type=int, default=256, help='then crop to this size')
+        parser.add_argument('--fineSize', type=int, default=224, help='then crop to this size')
         
         # model setup
         parser.add_argument('--name', type=str, default='experiment_name', help='name of the experiment as well as name of checkpoint sub-folder')
@@ -59,7 +59,6 @@ class BaseOptions():
         # data loader argument        
         parser.set_defaults(dataroot='C:/Users/m1101/Downloads/Shadow_Removal/SID/_Git_SID/data_processing/dataset/NTUST_TU/train/')
         parser.set_defaults(dataset_mode='shadowparam')
-        parser.set_defaults(batch_size=16)
 
         # data transform argument        
         parser.set_defaults(loadSize=256)
@@ -81,7 +80,7 @@ class BaseOptions():
         # parser.set_defaults(GPU=0)
         # parser.set_defaults(save_epoch_freq=2)
 
-        # args, unknown = parser.parse_known_args()
+        args, unknown = parser.parse_known_args()
         return args
 
     def gather_options(self):
@@ -92,13 +91,13 @@ class BaseOptions():
             parser = self.initialize(parser)
 
         # get the basic options
-        # opt = self.get_known(parser)
+        basic_opt = self.get_known(parser)
 
         # modify model-related parser options
-        model_name = opt.model
+        model_name = basic_opt.model
         model_option_setter = models.get_option_setter(model_name)
         parser = model_option_setter(parser, self.isTrain)
-        opt = self.get_known(parser)
+        args = self.get_known(parser)
 
         # modify dataset-related parser options
         # dataset_name = opt.dataset_mode
@@ -106,7 +105,6 @@ class BaseOptions():
         # parser = dataset_option_setter(parser, self.isTrain)
         # args, unknown = parser.parse_known_args()
         
-        args, unknown = parser.parse_known_args()
         self.parser = parser
         return args
 
