@@ -156,11 +156,12 @@ class SIDModel(DistangleModel):
     def get_prediction(self,input_img, shadow_mask):
         # self.input_img = input['A'].to(self.device)
         # self.shadow_mask = input['B'].to(self.device)
-        # self.shadow_mask = (self.shadow_mask>0.9).type(torch.float)*2-1
         
         self.input_img = input_img.to(self.device)
         self.shadow_mask = shadow_mask.to(self.device)
-        self.shadow_mask_3d= (self.shadow_mask>0).type(torch.float).expand(self.input_img.shape)   
+        
+        self.shadow_mask = (self.shadow_mask>0.9).type(torch.float)*2-1
+        self.shadow_mask_3d = (self.shadow_mask>0).type(torch.float).expand(self.input_img.shape)   
         
         w = self.input_img.shape[2]
         h = self.input_img.shape[3]
@@ -168,7 +169,7 @@ class SIDModel(DistangleModel):
         m = self.input_img.shape[1]
         # compute output of generator
         inputG = torch.cat([self.input_img,self.shadow_mask],1)
-        inputG = F.upsample(inputG,size=(256,256))
+        inputG = F.interpolate(inputG,size=(256,256))
         self.shadow_param_pred = self.netG(inputG)
         self.shadow_param_pred = self.shadow_param_pred.view([n,6,-1])
         self.shadow_param_pred = torch.mean(self.shadow_param_pred,dim=2)
