@@ -19,10 +19,6 @@ def find_dataset_using_name(dataset_name):
 
     return dataset
 
-def get_option_setter(dataset_name):
-    dataset_class = find_dataset_using_name(dataset_name)
-    return dataset_class.modify_commandline_options
-
 def create_dataset(opt):
     dataset = find_dataset_using_name(opt.dataset_mode)
     instance = dataset()
@@ -34,7 +30,7 @@ class CustomDatasetDataLoader(BaseDataLoader):
     def name(self):
         return 'CustomDatasetDataLoader'
 
-    def initialize(self, opt):
+    def __init__(self, opt):
         BaseDataLoader.initialize(self, opt)
         self.dataset = create_dataset(opt)
         self.dataloader = torch.utils.data.DataLoader(
@@ -55,7 +51,12 @@ class CustomDatasetDataLoader(BaseDataLoader):
                 break
             yield data
 
-def CreateDataLoader(opt):
-    data_loader = CustomDatasetDataLoader()
-    data_loader.initialize(opt)
-    return data_loader
+            
+# def CreateDataLoader(opt):
+#     data_loader = CustomDatasetDataLoader()
+#     data_loader.initialize(opt)
+#     return data_loader
+
+# def get_option_setter(dataset_name):
+#     dataset_class = find_dataset_using_name(dataset_name)
+#     return dataset_class.modify_commandline_options

@@ -2,9 +2,9 @@ import argparse
 import os
 from util import util
 import torch
+
 import models
 import data
-
 
 class BaseOptions():
     def __init__(self):
@@ -23,10 +23,9 @@ class BaseOptions():
         parser.add_argument('--fineSize', type=int, default=256, help='then crop to this size')
         
         # model setup
-        parser.add_argument('--checkpoints_dir', type=str, default='../checkpoints', help='models are saved here')
         parser.add_argument('--name', type=str, default='experiment_name', help='name of the experiment as well as name of checkpoint sub-folder')
         parser.add_argument('--suffix', default='', type=str, help='customized suffix: opt.name = opt.name + suffix: e.g., {model}_{netG}_size{loadSize}')
-        
+        parser.add_argument('--checkpoints_dir', type=str, default='../checkpoints', help='models are saved here')
         parser.add_argument('--input_nc', type=int, default=3, help='channels of input image')
         parser.add_argument('--output_nc', type=int, default=3, help='channels of output image')
         parser.add_argument('--ngf', type=int, default=64, help='# of gen filters in first conv layer')
@@ -45,17 +44,9 @@ class BaseOptions():
         parser.add_argument('--init_gain', type=float, default=0.02, help='scaling factor for normal, xavier and orthogonal.')
         #parser.add_argument('--verbose', action='store_true', help='if specified, print more debugging information')       
         
+        #parser.add_argument('--n_layers_D', type=int, default=3, help='only used if netD==n_layers')
         
-
-        
-        
-        parser.add_argument('--n_layers_D', type=int, default=3, help='only used if netD==n_layers')
         #parser.add_argument('--direction', type=str, default='AtoB', help='AtoB or BtoA')
-
-
-        
-
-
         # parser.add_argument('--finetuning', action='store_true')
         # parser.add_argument('--finetuning_name', type=str)
         # parser.add_argument('--finetuning_epoch', type=str)
@@ -65,29 +56,32 @@ class BaseOptions():
         return parser
     
     def get_known(self, parser):
-                
-        parser.set_defaults(batchs=16)
-        parser.set_defaults(lr=0.0002)
-        parser.set_defaults(GPU=0)
+        # data loader argument        
+        parser.set_defaults(dataroot='C:/Users/m1101/Downloads/Shadow_Removal/SID/_Git_SID/data_processing/dataset/NTUST_TU/train/')
+        parser.set_defaults(dataset_mode='shadowparam')
+        parser.set_defaults(batch_size=16)
+
+        # data transform argument        
         parser.set_defaults(loadSize=256)
         parser.set_defaults(fineSize=256)
-        
+
+        # model setup        
+        parser.set_defaults(checkpoints_dir="C:/Users/m1101/Downloads/Shadow_Removal/SID/_Git_SID/checkpoints_PAMI/")
+        parser.set_defaults(name='SID_GRESNEXT_shadowparam')
         parser.set_defaults(model="SID")
         parser.set_defaults(netG='RESNEXT')
-        parser.set_defaults(phase='train_')
+        
+        # training setup        
         parser.set_defaults(gpu_ids='0')
-        parser.set_defaults(dataset_mode='shadowparam')
-        # parser.set_defaults(save_epoch_freq=2)
-        
-        parser.set_defaults(niter=10)
-        parser.set_defaults(niter_decay=40)
         parser.set_defaults(lambda_L1=100)
-        parser.set_defaults(name='SID_GRESNEXT_shadowparam')
         
-        parser.set_defaults(checkpoints_dir="C:/Users/m1101/Downloads/Shadow_Removal/SID/_Git_SID/checkpoints_PAMI/")
-        parser.set_defaults(dataroot='C:/Users/m1101/Downloads/Shadow_Removal/SID/_Git_SID/data_processing/dataset/NTUST_TU/train/')
-        
-        args, unknown = parser.parse_known_args()
+        parser.set_defaults(phase='train_')
+        parser.set_defaults(lr=0.0002)
+
+        # parser.set_defaults(GPU=0)
+        # parser.set_defaults(save_epoch_freq=2)
+
+        # args, unknown = parser.parse_known_args()
         return args
 
     def gather_options(self):
@@ -98,25 +92,22 @@ class BaseOptions():
             parser = self.initialize(parser)
 
         # get the basic options
-        #opt, _ = parser.parse_known_args()
-        opt = self.get_known(parser)
+        # opt = self.get_known(parser)
 
         # modify model-related parser options
         model_name = opt.model
         model_option_setter = models.get_option_setter(model_name)
         parser = model_option_setter(parser, self.isTrain)
         opt = self.get_known(parser)
-        opt, _ = parser.parse_known_args()  # parse again with the new defaults
 
         # modify dataset-related parser options
-        dataset_name = opt.dataset_mode
-        dataset_option_setter = data.get_option_setter(dataset_name)
-        parser = dataset_option_setter(parser, self.isTrain)
+        # dataset_name = opt.dataset_mode
+        # dataset_option_setter = data.get_option_setter(dataset_name)
+        # parser = dataset_option_setter(parser, self.isTrain)
+        # args, unknown = parser.parse_known_args()
         
+        args, unknown = parser.parse_known_args()
         self.parser = parser
-        
-        args, unknown = self.parser.parse_known_args()
-
         return args
 
     def print_options(self, opt):
@@ -140,7 +131,6 @@ class BaseOptions():
             opt_file.write('\n')
 
     def parse(self):
-
         opt = self.gather_options()
         opt.isTrain = self.isTrain   # train or test
 

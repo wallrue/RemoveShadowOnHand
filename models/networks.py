@@ -21,7 +21,6 @@ def get_norm_layer(norm_type='instance'):
         raise NotImplementedError('normalization layer [%s] is not found' % norm_type)
     return norm_layer
 
-
 def get_scheduler(optimizer, opt):
     if opt.lr_policy == 'lambda':
         def lambda_rule(epoch):
@@ -39,7 +38,6 @@ def get_scheduler(optimizer, opt):
     else:
         return NotImplementedError('learning rate policy [%s] is not implemented', opt.lr_policy)
     return scheduler
-
 
 def init_weights(net, init_type='normal', gain=0.02):
     def init_func(m):
@@ -72,14 +70,6 @@ def init_net(net, init_type='normal', init_gain=0.02, gpu_ids=[]):
     init_weights(net, init_type, gain=init_gain)
     return net
 
-# def define_vgg(num_input,num_classes,init_type='normal', init_gain=0.02, gpu_ids=[]):
-#     print(gpu_ids)
-#     net = create_vgg(num_input,num_classes)
-#     net.to(gpu_ids[0])
-#     net = torch.nn.DataParallel(net,gpu_ids)
-#     init_weights(net,init_type,gain=init_gain)
-#     return net
-
 def define_G(input_nc, output_nc, ngf, netG, norm='batch', use_dropout=False, init_type='normal', init_gain=0.02, gpu_ids=[]):
     net = None
     norm_layer = get_norm_layer(norm_type=norm)
@@ -104,7 +94,6 @@ def define_G(input_nc, output_nc, ngf, netG, norm='batch', use_dropout=False, in
     else:
         raise NotImplementedError('Generator model name [%s] is not recognized' % netG)
     return init_net(net, init_type, init_gain, gpu_ids)
-
 
 def define_D(input_nc, ndf, netD,
              n_layers_D=3, norm='batch', use_sigmoid=False, init_type='normal', init_gain=0.02, gpu_ids=[]):

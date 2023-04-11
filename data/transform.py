@@ -1,8 +1,6 @@
-import math
 import random
 from PIL import Image, ImageOps
 import numbers
-import types
 import torchvision.transforms as transforms
 
 class RandomCrop(object):

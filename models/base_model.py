@@ -6,7 +6,6 @@ from . import networks
 import util.util as util
 import numpy as np
 class BaseModel():
-
     def name(self):
         return 'BaseModel'
     
@@ -42,7 +41,6 @@ class BaseModel():
             
         self.loss_names = []
         self.model_names = []
-        #self.visual_names = []
         self.image_paths = []
 
     def set_input(self, input):
@@ -54,83 +52,45 @@ class BaseModel():
         self.nim = self.input_img.shape[1]
         self.shadow_mask_3d= (self.shadow_mask>0).type(torch.float).expand(self.input_img.shape)   
         #self.shadow_mask_3d_over = (self.shadow_mask_over>0).type(torch.float).expand(self.input_img.shape)
-
-    def get_prediction(self,input):
-        self.input_img = input['A'].to(self.device)
-        self.shadow_mask = input['B'].to(self.device)
-        self.shadow_mask = (self.shadow_mask>0.9).type(torch.float)*2-1
-        self.shadow_mask_3d= (self.shadow_mask>0).type(torch.float).expand(self.input_img.shape)   
+    
+    def forward(self):
+        pass
+    
+    def get_prediction(self, input):
+        self.input_img = input['A']..to(self.device)
+        self.shadow_mask = input['B']..to(self.device)
+        self.shadow_mask = (self.shadow_mask>0.9).type(torch.float)*2-1_i
+        self.shadow_mask_3d = (self.shadow_mask>0).type(torch.float).expand(self.inputmg.shape)   
         
         inputG = torch.cat([self.input_img,self.shadow_mask],1)
         out = self.netG(inputG)
         return util.tensor2im(out)
-    
-    def forward(self):
-        pass
 
     # load and print networks; create schedulers
-    def setup(self, opt, parser=None):
-        print(self.name)
-        if self.isTrain:
-            self.schedulers = [networks.get_scheduler(optimizer, opt) for optimizer in self.optimizers]
+#     def setup(self, opt, parser=None):
+#         print(self.name)
+#         if self.isTrain:
+#             self.schedulers = [networks.get_scheduler(optimizer, opt) for optimizer in self.optimizers]
 
-        if not self.isTrain: # or opt.continue_train or opt.finetuning:
-            print("LOADING %s"%(self.name))
-            self.load_networks(opt.epoch)
-        self.print_networks() #opt.verbose)
-
+#         if not self.isTrain: # or opt.continue_train or opt.finetuning:
+#             print("LOADING %s"%(self.name))
+#             self.load_networks(opt.epoch)
+#         self.print_networks() #opt.verbose)
 
     # used in test time, wrapping `forward` in no_grad() so we don't save
     # intermediate steps for backprop
-    def test(self):
-        with torch.no_grad():
-            self.forward()
+    # def test(self):
+    #     with torch.no_grad():
+    #         self.forward()
 
     # get image paths
-    def get_image_paths(self):
-        return self.image_paths
+    # def get_image_paths(self):
+    #     return self.image_paths
 
     def optimize_parameters(self):
         pass
 
-    # update learning rate (called once every epoch)
-    def update_learning_rate(self,loss=None):
-        for scheduler in self.schedulers:
-            if not loss:
-                scheduler.step()
-            else:
-                scheduler.step(loss)
-
-        lr = self.optimizers[0].param_groups[0]['lr']
-        print('learning rate = %.7f' % lr)
-
-#     # return visualization images. train.py will display these images, and save the images to a html
-#     def get_current_visuals(self):
-#         t= time.time()
-#         nim = self.shadow.shape[0]
-#         visual_ret = OrderedDict()
-#         all =[]
-#         for i in range(0,min(nim-1,5)):
-#             row=[]
-#             for name in self.visual_names:
-#                 if isinstance(name, str):
-#                     if hasattr(self,name):
-#                         im = util.tensor2im(getattr(self, name).data[i:i+1,:,:,:])
-#                         row.append(im)
-#             row=tuple(row)
-#             all.append(np.hstack(row))
-#         all = tuple(all)
-        
-#         allim = np.vstack(all)
-#         return OrderedDict([(self.opt.name,allim)])
-    
-    def get_current_losses(self):
-        errors_ret = OrderedDict()
-        for name in self.loss_names:
-            if hasattr(self,'loss_'+name):
-                errors_ret[name] = float(getattr(self, 'loss_' + name))
-        return errors_ret
-
+    # save and load the networks
     def save_networks(self, epoch):
         for name in self.model_names:
             save_filename = '%s_net_%s.pth' % (epoch, name)
@@ -187,7 +147,16 @@ class BaseModel():
                 print(net)
                 print('[Network %s] Total number of parameters : %.3f M' % (name, num_params / 1e6))
         print('-----------------------------------------------')
-
+        
+    def update_learning_rate(self,loss=None):
+        for scheduler in self.schedulers:
+            if not loss:
+                scheduler.step()
+            else:
+                scheduler.step(loss)
+        lr = self.optimizers[0].param_groups[0]['lr']
+        print('learning rate = %.7f' % lr)
+        
     # set requies_grad=Fasle to avoid computation
     def set_requires_grad(self, nets, requires_grad=False):
         if not isinstance(nets, list):
@@ -196,3 +165,10 @@ class BaseModel():
             if net is not None:
                 for param in net.parameters():
                     param.requires_grad = requires_grad
+                     
+    def get_current_losses(self):
+        errors_ret = OrderedDict()
+        for name in self.loss_names:
+            if hasattr(self,'loss_'+name):
+                errors_ret[name] = float(getattr(self, 'loss_' + name))
+        return errors_ret

@@ -16,18 +16,12 @@ class SIDModel(DistangleModel):
     @staticmethod
     def modify_commandline_options(parser, is_train=True):
         parser.set_defaults(pool_size=0, no_lsgan=True, norm='batch')
-        parser.set_defaults(dataset_mode='shadowparam') #'aligned')
-        # parser.add_argument('--wdataroot',default='None',  help='path to images (should have subfolders trainA, trainB, valA, valB, etc)')
-        # parser.add_argument('--use_our_mask', action='store_true')
-        # parser.add_argument('--mask_train',type=str,default=None)
-        # parser.add_argument('--mask_test',type=str,default=None)
         return parser
 
     def initialize(self, opt):
         BaseModel.initialize(self, opt)
         self.isTrain = opt.isTrain
         self.loss_names = ['G_param','alpha','rescontruction']
-        # self.visual_names = ['input_img', 'litgt','alpha_pred','out','final','outgt']
         self.model_names = ['G','M']
         opt.output_nc= 3 
         self.netG = networks.define_G(4, 6, opt.ngf, 'RESNEXT', opt.norm,
@@ -39,10 +33,12 @@ class SIDModel(DistangleModel):
         
         if self.isTrain:
             self.fake_AB_pool = ImagePool(opt.pool_size)
+            
             # define loss functions
             self.MSELoss = torch.nn.MSELoss()
             self.criterionL1 = torch.nn.L1Loss()
             self.bce = torch.nn.BCEWithLogitsLoss()
+            
             # initialize optimizers
             self.optimizers = []
             self.optimizer_G = torch.optim.Adam(self.netG.parameters(),
@@ -60,9 +56,7 @@ class SIDModel(DistangleModel):
         
         self.shadow_mask = (self.shadow_mask>0.9).type(torch.float)*2-1
         self.nim = self.input_img.shape[1]
-        self.shadow_mask_3d = (self.shadow_mask>0).type(torch.float).expand(self.input_img.shape) 
-        # if 'isreal' in input:
-        #     self.isreal = input['isreal']
+        self.shadow_mask_3d = (self.shadow_mask>0).type(torch.float).expand(self.input_img.shape)
     
     def forward(self):
         # compute output of generator
@@ -70,12 +64,12 @@ class SIDModel(DistangleModel):
         #self.shadow_param_pred = torch.squeeze(self.netG(inputG))
         self.shadow_param_pred = self.netG(inputG)
 
-        #m = self.shadow_param_pred.shape[1]
+        # m = self.shadow_param_pred.shape[1]
         w = inputG.shape[2]
         h = inputG.shape[3]
         
         # compute lit image
-        #self.shadow_param_pred = torch.mean(self.shadow_param_pred.view([n,m,-1]),dim=2)
+        # self.shadow_param_pred = torch.mean(self.shadow_param_pred.view([n,m,-1]),dim=2)
         add = self.shadow_param_pred[:,[0,2,4]]
         mul = (self.shadow_param_pred[:,[1,3,5]]*2) +3
         n = self.shadow_param_pred.shape[0]
@@ -109,54 +103,8 @@ class SIDModel(DistangleModel):
         self.final = (self.input_img/2+0.5)*(1-self.alpha_pred) + self.lit*(self.alpha_pred)
         self.final = self.final*2-1
 
-    def backward(self):
-        criterion = self.criterionL1 
-        lambda_ = self.opt.lambda_L1 
-        #self.loss_G_param = self.MSELoss(self.shadow_param_pred, self.shadow_param) * lambda_ * 10
-        self.shadow_param[:,[1,3,5]] = (self.shadow_param[:,[1,3,5]])/2 - 1.5
-        self.loss_G_param = criterion(self.shadow_param_pred, self.shadow_param) * lambda_ 
-        self.loss_rescontruction = criterion(self.final,self.shadowfree_img) * lambda_
-        self.loss = self.loss_G_param + self.loss_rescontruction
-        self.loss.backward()
     
-    def optimize_parameters(self):
-        self.forward()
-        self.optimizer_G.zero_grad()
-        self.optimizer_M.zero_grad()
-        self.backward()
-        self.optimizer_G.step()
-        self.optimizer_M.step()
-    
-#     def get_current_visuals(self):
-#         t= time.time()
-#         nim = self.input_img.shape[0]
-#         visual_ret = OrderedDict()
-#         all =[]
-#         for i in range(0,min(nim-1,5)):
-#             row=[]
-#             for name in self.visual_names:
-#                 if isinstance(name, str):
-#                     if hasattr(self,name):
-#                         im = util.tensor2im(getattr(self, name).data[i:i+1,:,:,:])
-#                         row.append(im)
-            
-#             row=tuple(row)
-#             row = np.hstack(row)
-#             if hasattr(self,'isreal'):
-#                 if self.isreal[i] == 0:
-#                     row = ImageOps.crop(Image.fromarray(row),border =5)
-#                     row = ImageOps.expand(row,border=5,fill=(0,200,0))
-#                     row = np.asarray(row)
-#             all.append(row)
-#         all = tuple(all)
-        
-#         allim = np.vstack(all)
-#         return OrderedDict([(self.opt.name,allim)])
-    
-    def get_prediction(self,input_img, shadow_mask):
-        # self.input_img = input['A'].to(self.device)
-        # self.shadow_mask = input['B'].to(self.device)
-        
+    def get_prediction(self, input_img, shadow_mask):
         self.input_img = input_img.to(self.device)
         self.shadow_mask = shadow_mask.to(self.device)
         
@@ -167,6 +115,7 @@ class SIDModel(DistangleModel):
         h = self.input_img.shape[3]
         n = self.input_img.shape[0]
         m = self.input_img.shape[1]
+        
         # compute output of generator
         inputG = torch.cat([self.input_img,self.shadow_mask],1)
         inputG = F.interpolate(inputG,size=(256,256))
@@ -225,3 +174,21 @@ class SIDModel(DistangleModel):
         RES['ori_Size'] = util.tensor2im(final.detach().cpu())
         '''
         return  RES
+        
+    def backward(self):
+        criterion = self.criterionL1 
+        lambda_ = self.opt.lambda_L1
+        self.shadow_param[:,[1,3,5]] = (self.shadow_param[:,[1,3,5]])/2 - 1.5
+        self.loss_G_param = criterion(self.shadow_param_pred, self.shadow_param) * lambda_ 
+        self.loss_rescontruction = criterion(self.final,self.shadowfree_img) * lambda_
+        self.loss = self.loss_G_param + self.loss_rescontruction
+        self.loss.backward()
+    
+    def optimize_parameters(self):
+        self.forward()
+        self.optimizer_G.zero_grad()
+        self.optimizer_M.zero_grad()
+        self.backward()
+        self.optimizer_G.step()
+        self.optimizer_M.step()
+

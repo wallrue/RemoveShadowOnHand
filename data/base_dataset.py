@@ -1,6 +1,4 @@
 import torch.utils.data as data
-from PIL import Image
-import torchvision.transforms as transforms
 
 class BaseDataset(data.Dataset):
     def __init__(self):
@@ -9,12 +7,9 @@ class BaseDataset(data.Dataset):
     def name(self):
         return 'BaseDataset'
 
-    @staticmethod
-    def modify_commandline_options(parser, is_train):
-        return parser
-
-    def initialize(self, opt):
-        pass
-
     def __len__(self):
         return 0
+    
+    # @staticmethod
+    # def modify_commandline_options(parser, is_train):
+    #     return parser

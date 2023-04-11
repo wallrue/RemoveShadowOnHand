@@ -20,21 +20,12 @@ class DistangleModel(BaseModel):
         self.isTrain = opt.isTrain
         self.loss_names = ['G']
         self.model_names = ['G']
-        # specify the images you want to save/display. The program will call base_model.get_current_visuals
-        # self.visual_names = ['input_img', 'shadow_mask','out','outgt']
-        # specify the models you want to save to the disk. The program will call base_model.save_networks and base_model.load_networks
-        # if self.isTrain:
-        #     self.model_names = ['G']
-        # else:  # during test time, only load Gs
-        #     self.model_names = ['G']
-        # load/define networks
         
         opt.output_nc= 3 if opt.task=='sr' else 1 # out channel is 3 for shadow removal, out channel is 1 for detection
         self.netG = networks.define_G(4, opt.output_nc, opt.ngf, 'RESNEXT', opt.norm,
                                       not opt.no_dropout, opt.init_type, opt.init_gain, self.gpu_ids)
         self.netG.to(self.device)
-        print(self.netG)
-        #self.netG.print_networks() 
+        self.netG.print_networks() 
         if self.isTrain:
             # self.fake_AB_pool = ImagePool(opt.pool_size)
             # define loss functions
@@ -87,12 +78,11 @@ class DistangleModel(BaseModel):
         
         self.alpha = torch.mean(self.shadowfree_img / self.lit,dim=1,keepdim=True)
 
-
-    def get_prediction(self,input):
+    def get_prediction(self, input):
         self.input_img = input['A'].to(self.device)
         self.shadow_mask = input['B'].to(self.device)
         self.shadow_mask = (self.shadow_mask>0.9).type(torch.float)*2-1
-        self.shadow_mask_3d= (self.shadow_mask>0).type(torch.float).expand(self.input_img.shape)
+        self.shadow_mask_3d = (self.shadow_mask>0).type(torch.float).expand(self.input_img.shape)
         
         # compute output of generator
         inputG = torch.cat([self.input_img,self.shadow_mask],1)
