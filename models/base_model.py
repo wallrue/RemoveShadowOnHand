@@ -2,7 +2,7 @@ import os
 import time
 import torch
 from collections import OrderedDict
-from . import networks
+from . import network_GAN
 import util.util as util
 import numpy as np
 
@@ -71,7 +71,7 @@ class BaseModel():
     def setup(self, opt, parser=None):
         print(self.name)
         if self.isTrain:
-            self.schedulers = [networks.get_scheduler(optimizer, opt) for optimizer in self.optimizers]
+            self.schedulers = [network_GAN.get_scheduler(optimizer, opt) for optimizer in self.optimizers]
 
         if not self.isTrain: # or opt.continue_train or opt.finetuning:
             print("LOADING %s"%(self.name))

@@ -3,6 +3,7 @@ from torch import nn
 import torch.nn.functional as F
 import math
 import cv2
+import numpy as np
 
 def calculate_smooth_loss(pred_map):
     def gradient(pred):
@@ -19,9 +20,9 @@ def calculate_smooth_loss(pred_map):
     loss += (dx2.abs().mean() + dxdy.abs().mean() + dydx.abs().mean() + dy2.abs().mean())*weight
     return loss
 
-def calculate_psnr(img1_tensor, img2_tensor):
-    img1 = img1_tensor.numpy().cpu().astype(np.float64)
-    img2 = img2_tensor.numpy().cpu().astype(np.float64)
+def calculate_psnr(img1_tensor, img2_tensor):    
+    img1 = ((img1_tensor + 1.0)*255.0/2.0).cpu().numpy().astype(np.float64)
+    img2 = ((img2_tensor + 1.0)*255.0/2.0).cpu().numpy().astype(np.float64)
     mse = np.mean((img1 - img2)**2)
     if mse == 0:
         return float('inf')
@@ -52,9 +53,8 @@ def calculate_ssim(img1_tensor, img2_tensor):
                                                                 (sigma1_sq + sigma2_sq + C2))
         return ssim_map.mean()
     
-    
-    img1 = img1_tensor.numpy().cpu().astype(np.float64)
-    img2 = img2_tensor.numpy().cpu().astype(np.float64)
+    img1 = ((img1_tensor + 1.0)*255.0/2.0).cpu().numpy().astype(np.float64)
+    img2 = ((img2_tensor + 1.0)*255.0/2.0).cpu().numpy().astype(np.float64)
     if not img1.shape == img2.shape:
         raise ValueError('Input images must have the same dimensions.')
     if img1.ndim == 2:

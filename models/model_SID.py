@@ -25,7 +25,7 @@ class SIDModel(BaseModel):
         self.loss_names = ['G_param','alpha','rescontruction']
         self.model_names = ['G','M']
         
-        self.netG = network_GAN.define_G(opt.input_nc, 6, opt.ngf, 'RESNEXT', opt.norm,
+        self.netG = network_GAN.define_G(opt.input_nc+1, 6, opt.ngf, 'RESNEXT', opt.norm,
                                       not opt.no_dropout, opt.init_type, opt.init_gain, self.gpu_ids)
         self.netM = network_GAN.define_G(6+1, opt.output_nc, opt.ngf, 'unet_256', opt.norm,
                                       not opt.no_dropout, opt.init_type, opt.init_gain, self.gpu_ids)
