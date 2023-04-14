@@ -30,11 +30,11 @@ class BaseOptions():
         parser.add_argument('--output_nc', type=int, default=3, help='channels of output image')
         parser.add_argument('--ngf', type=int, default=64, help='# of gen filters in first conv layer')
         parser.add_argument('--ndf', type=int, default=64, help='# of discrim filters in first conv layer')
-        parser.add_argument('--model', type=str, help='chooses which model to use. cycle_gan, pix2pix, test')
-        parser.add_argument('--netD', type=str, default='basic', help='selects model to use for netD')
-        parser.add_argument('--netG', type=str, default='resnet_9blocks', help='selects model to use for netG')
+        # parser.add_argument('--model', type=str, help='chooses which model to use. cycle_gan, pix2pix, test')
+        # parser.add_argument('--netD', type=str, default='basic', help='selects model to use for netD')
+        # parser.add_argument('--netG', type=str, default='resnet_9blocks', help='selects model to use for netG')
         
-        # training setup
+        # model training configuration
         parser.add_argument('--epoch', type=str, default='latest', help='which epoch to load? set to latest to use latest cached model')
         parser.add_argument('--gpu_ids', type=str, default='0', help='gpu ids: e.g. 0  0,1,2, 0,2. use -1 for CPU')
         parser.add_argument('--lambda_GAN', type=float, default=0.0)
@@ -58,17 +58,17 @@ class BaseOptions():
     def get_known(self, parser):
         # data loader argument        
         parser.set_defaults(dataroot='C:/Users/m1101/Downloads/Shadow_Removal/SID/_Git_SID/data_processing/dataset/NTUST_TU/train/')
-        parser.set_defaults(dataset_mode='shadowparam')
+        parser.set_defaults(dataset_mode='shadowparam') #parser.set_defaults(dataset_mode='shadowparam')
 
         # data transform argument        
         parser.set_defaults(loadSize=256)
         parser.set_defaults(fineSize=256)
 
-        # model setup        
-        parser.set_defaults(checkpoints_dir="C:/Users/m1101/Downloads/Shadow_Removal/SID/_Git_SID/checkpoints_PAMI/")
-        parser.set_defaults(name='SID_GRESNEXT_shadowparam')
+        # model setup
         parser.set_defaults(model="SID")
-        parser.set_defaults(netG='RESNEXT')
+        # parser.set_defaults(checkpoints_dir="C:/Users/m1101/Downloads/Shadow_Removal/SID/_Git_SID/checkpoints_PAMI/")
+        # parser.set_defaults(name='SID_GRESNEXT_shadowparam')
+        # parser.set_defaults(netG='RESNEXT')
         
         # training setup        
         parser.set_defaults(gpu_ids='0')
