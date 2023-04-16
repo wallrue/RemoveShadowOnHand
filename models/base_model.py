@@ -1,10 +1,10 @@
 import os
 import time
 import torch
-from collections import OrderedDict
 from . import network_GAN
 import util.util as util
 import numpy as np
+from collections import OrderedDict
 
 class BaseModel():
     def name(self):
@@ -30,7 +30,7 @@ class BaseModel():
                 
     def initialize(self, opt):
         self.opt = opt
-        self.epoch = 0
+        #self.epoch = 0
         self.gpu_ids = opt.gpu_ids
         self.isTrain = opt.isTrain
         self.device = torch.device('cuda:{}'.format(self.gpu_ids[0])) if self.gpu_ids else torch.device('cpu')
@@ -156,7 +156,8 @@ class BaseModel():
             else:
                 scheduler.step(loss)
         lr = self.optimizers[0].param_groups[0]['lr']
-        print('learning rate = %.7f' % lr)
+        return lr
+        #print('learning rate = %.7f' % lr)
         
     # set requies_grad=Fasle to avoid computation
     def set_requires_grad(self, nets, requires_grad=False):
@@ -171,5 +172,5 @@ class BaseModel():
         errors_ret = OrderedDict()
         for name in self.loss_names:
             if hasattr(self,'loss_'+name):
-                errors_ret[name] = float(getattr(self, 'loss_' + name))
+                errors_ret[name] = float("%.4f" % getattr(self, 'loss_' + name))        
         return errors_ret

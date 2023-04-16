@@ -26,27 +26,46 @@ def create_dataset(opt):
     print("dataset [%s] was created" % (instance.name()))
     return instance
 
+def train_val_split(dataset, val_split=1.0):
+    valDataset = torch.utils.data.Subset(dataset, range(0, int(val_split * len(dataset))))
+    trainDataset = torch.utils.data.Subset(dataset, range(int(val_split*len(dataset)), len(dataset)))
+    return trainDataset, valDataset
+
+# def train_val_split(dataset, val_split=0.25):
+#     train_idx, val_idx = train_test_split(list(range(len(dataset))), test_size=val_split)
+#     datasets = {}
+#     datasets['train'] = Subset(dataset, train_idx)
+#     datasets['val'] = Subset(dataset, val_idx)
+#     return datasets
+
 class CustomDatasetDataLoader(BaseDataLoader):
     def name(self):
         return 'CustomDatasetDataLoader'
 
     def __init__(self, opt):
         BaseDataLoader.__init__(self, opt)
-        self.dataset = create_dataset(opt)
-        self.dataloader = torch.utils.data.DataLoader(
-            self.dataset,
+        self.working_subset = 'train' #the kind of dataset to use ['train', 'valid']
+        self.trainDataset, self.validDataset = train_val_split(create_dataset(opt), opt.validDataset_split)
+        self.trainDataloader = torch.utils.data.DataLoader(
+            self.trainDataset,
             batch_size=opt.batch_size,
             shuffle=not opt.serial_batches,
             num_workers=int(opt.num_threads))
+        self.validDataloader = torch.utils.data.DataLoader(
+            self.validDataset,
+            batch_size=opt.batch_size,
+            shuffle=not opt.serial_batches,
+            num_workers=int(opt.num_threads))        
+        
 
     def load_data(self):
         return self
 
     def __len__(self):
-        return min(len(self.dataset), self.opt.max_dataset_size)
+        return min(len(getattr(self, self.working_subset + 'Dataset')), self.opt.max_dataset_size)
 
     def __iter__(self):
-        for i, data in enumerate(self.dataloader):
+        for i, data in enumerate(getattr(self, self.working_subset + 'Dataloader')):
             if i * self.opt.batch_size >= self.opt.max_dataset_size:
                 break
             yield data

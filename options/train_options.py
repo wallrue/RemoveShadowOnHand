@@ -15,7 +15,7 @@ class TrainOptions(BaseOptions):
         parser.add_argument('--no_flip', action='store_true', default=False, help='if specified, do not flip the images for data augmentation')
         
         # model training configuration
-        parser.add_argument('--lambda_L1', type=float, default=100.0, help='weight for L1 loss')
+        parser.add_argument('--lambda_L1', type=float, default=0.0)
         parser.add_argument('--no_lsgan', action='store_true', help='do *not* use least square GAN, if false, use vanilla GAN')
         parser.add_argument('--pool_size', type=int, default=50, help='the size of image buffer that stores previously generated images')
         parser.add_argument('--norm', type=str, default='instance', help='instance normalization or batch normalization')
@@ -24,9 +24,10 @@ class TrainOptions(BaseOptions):
         parser.add_argument('--lr', type=float, default=0.0002, help='initial learning rate for adam')
         
         # training process configuration
+        parser.add_argument('--lr_policy', type=str, default='lambda', help='learning rate policy: lambda|step|plateau|cosine')
         parser.add_argument('--niter', type=int, default=10, help='# of iter at starting learning rate')
         parser.add_argument('--niter_decay', type=int, default=40, help='# of iter to linearly decay learning rate to zero')
-            
+        parser.add_argument('--epoch_count', type=int, default=1, help='the starting epoch count, we save the model by <epoch_count>, <epoch_count>+<save_latest_freq>, ...')
             
         # parser.add_argument('--randomSize', action='store_true', help='if specified, do not flip the images for data augmentation')
 
@@ -36,7 +37,7 @@ class TrainOptions(BaseOptions):
         # parser.add_argument('--continue_train', action='store_true', help='continue training: load the latest model')
         # parser.add_argument('--epoch_count', type=int, default=1, help='the starting epoch count, we save the model by <epoch_count>, <epoch_count>+<save_latest_freq>, ...')
 
-        # parser.add_argument('--lr_policy', type=str, default='lambda', help='learning rate policy: lambda|step|plateau|cosine')
+        
         # parser.add_argument('--lr_decay_iters', type=int, default=50, help='multiply by a gamma every lr_decay_iters iterations')
         
         self.isTrain = True

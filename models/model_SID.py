@@ -25,7 +25,7 @@ class SIDModel(BaseModel):
     def initialize(self, opt):
         BaseModel.initialize(self, opt)
         self.isTrain = opt.isTrain
-        self.loss_names = ['G_param','alpha','rescontruction']
+        self.loss_names = ['G_param','alpha','reconstruction']
         self.model_names = ['G','M']
         
         self.netG = network_GAN.define_G(opt.input_nc+1, 6, opt.ngf, 'RESNEXT', opt.norm,
@@ -182,7 +182,7 @@ class SIDModel(BaseModel):
         lambda_ = self.opt.lambda_L1
         self.shadow_param[:,[1,3,5]] = (self.shadow_param[:,[1,3,5]])/2 - 1.5
         self.loss_G_param = criterion(self.shadow_param_pred, self.shadow_param) * lambda_ 
-        self.loss_rescontruction = criterion(self.final,self.shadowfree_img) * lambda_
+        self.loss_rescontruction = criterion(self.final, self.shadowfree_img) * lambda_
         self.loss = self.loss_G_param + self.loss_rescontruction
         self.loss.backward()
     

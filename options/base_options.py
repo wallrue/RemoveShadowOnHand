@@ -17,6 +17,7 @@ class BaseOptions():
         parser.add_argument('--dataset_mode', type=str, default='single', help='chooses kind of dataset loader. [single, shadowparam]')
         parser.add_argument('--num_threads', type=int, default=2, help='# threads for loading data, num_workers')
         parser.add_argument('--batch_size', type=int, default=2, help='input batch size')
+        parser.add_argument('--validDataset_split', type=float, default=0.1, help='ratio for splitting valid dataset from main dataset')
         
         # data transform argument
         parser.add_argument('--loadSize', type=int, default=256, help='scale images to this size')
@@ -37,9 +38,8 @@ class BaseOptions():
         # model training configuration
         parser.add_argument('--epoch', type=str, default='latest', help='which epoch to load? set to latest to use latest cached model')
         parser.add_argument('--gpu_ids', type=str, default='0', help='gpu ids: e.g. 0  0,1,2, 0,2. use -1 for CPU')
-        parser.add_argument('--lambda_GAN', type=float, default=0.0)
-        parser.add_argument('--lambda_smooth', type=float, default=0.0)
-        parser.add_argument('--lambda_L1', type=float, default=0.0)
+        #parser.add_argument('--lambda_GAN', type=float, default=0.0)
+        #parser.add_argument('--lambda_smooth', type=float, default=0.0)
         parser.add_argument('--init_type', type=str, default='xavier', help='network initialization [normal|xavier|kaiming|orthogonal]')
         parser.add_argument('--init_gain', type=float, default=0.02, help='scaling factor for normal, xavier and orthogonal.')
         #parser.add_argument('--verbose', action='store_true', help='if specified, print more debugging information')       
@@ -76,7 +76,7 @@ class BaseOptions():
         
         parser.set_defaults(phase='train_')
         parser.set_defaults(lr=0.0002)
-
+        parser.set_defaults(save_epoch_freq=2)
         # parser.set_defaults(GPU=0)
         # parser.set_defaults(save_epoch_freq=2)
 
