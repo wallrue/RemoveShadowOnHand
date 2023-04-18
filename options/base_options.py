@@ -17,7 +17,6 @@ class BaseOptions():
         parser.add_argument('--dataset_mode', type=str, default='single', help='chooses kind of dataset loader. [single, shadowparam]')
         parser.add_argument('--num_threads', type=int, default=2, help='# threads for loading data, num_workers')
         parser.add_argument('--batch_size', type=int, default=2, help='input batch size')
-        parser.add_argument('--validDataset_split', type=float, default=0.1, help='ratio for splitting valid dataset from main dataset')
         
         # data transform argument
         parser.add_argument('--loadSize', type=int, default=256, help='scale images to this size')
@@ -31,7 +30,7 @@ class BaseOptions():
         parser.add_argument('--output_nc', type=int, default=3, help='channels of output image')
         parser.add_argument('--ngf', type=int, default=64, help='# of gen filters in first conv layer')
         parser.add_argument('--ndf', type=int, default=64, help='# of discrim filters in first conv layer')
-        # parser.add_argument('--model', type=str, help='chooses which model to use. cycle_gan, pix2pix, test')
+        parser.add_argument('--model', type=str, help='chooses which model to use. cycle_gan, pix2pix, test')
         # parser.add_argument('--netD', type=str, default='basic', help='selects model to use for netD')
         # parser.add_argument('--netG', type=str, default='resnet_9blocks', help='selects model to use for netG')
         
@@ -53,19 +52,23 @@ class BaseOptions():
         # parser.add_argument('--finetuning_dir', type=str)
 
         self.initialized = True
+        self.model_name = "" #Define in running file. Eg: "SID"
+        self.dataset_mode = "" #Define in running file. Eg: "shadowparam"
+        self.data_root = "" #Define in running file. Eg: "C:/Users/m1101/Downloads/Shadow_Removal/SID/_Git_SID/data_processing/dataset/NTUST_TU/train/"
         return parser
     
     def get_known(self, parser):
         # data loader argument        
-        parser.set_defaults(dataroot='C:/Users/m1101/Downloads/Shadow_Removal/SID/_Git_SID/data_processing/dataset/NTUST_TU/train/')
-        parser.set_defaults(dataset_mode='shadowparam') #parser.set_defaults(dataset_mode='shadowparam')
+        parser.set_defaults(dataroot=self.data_root)
+        parser.set_defaults(dataset_mode=self.dataset_mode) #parser.set_defaults(dataset_mode='shadowparam')
 
         # data transform argument        
         parser.set_defaults(loadSize=256)
         parser.set_defaults(fineSize=256)
 
-        # model setup
-        parser.set_defaults(model="SID")
+        # model setup: in gather_options by models.get_option_setter()
+        parser.set_defaults(name=self.model_name)
+        parser.set_defaults(model=self.model_name + "_" + self.dataset_mode)
         # parser.set_defaults(checkpoints_dir="C:/Users/m1101/Downloads/Shadow_Removal/SID/_Git_SID/checkpoints_PAMI/")
         # parser.set_defaults(name='SID_GRESNEXT_shadowparam')
         # parser.set_defaults(netG='RESNEXT')
@@ -94,8 +97,8 @@ class BaseOptions():
         basic_opt = self.get_known(parser)
 
         # modify model-related parser options
-        model_name = basic_opt.model
-        model_option_setter = models.get_option_setter(model_name)
+        #model_name = basic_opt.model
+        model_option_setter = models.get_option_setter(self.model_name)
         parser = model_option_setter(parser, self.isTrain)
         args = self.get_known(parser)
 
@@ -130,6 +133,7 @@ class BaseOptions():
 
     def parse(self):
         opt = self.gather_options()
+        opt.model = self.model_name
         opt.isTrain = self.isTrain   # train or test
 
         # process opt.suffix

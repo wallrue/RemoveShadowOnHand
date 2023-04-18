@@ -44,9 +44,9 @@ class CustomDatasetDataLoader(BaseDataLoader):
 
     def __init__(self, opt):
         BaseDataLoader.__init__(self, opt)
-        self.working_subset = 'train' #the kind of dataset to use ['train', 'valid']
-        self.trainDataset, self.validDataset = train_val_split(create_dataset(opt), opt.validDataset_split)
-        self.trainDataloader = torch.utils.data.DataLoader(
+        self.working_subset = 'main' #the kind of dataset to use ['train', 'valid']
+        self.mainDataset, self.validDataset = train_val_split(create_dataset(opt), opt.validDataset_split)
+        self.mainDataloader = torch.utils.data.DataLoader(
             self.trainDataset,
             batch_size=opt.batch_size,
             shuffle=not opt.serial_batches,
@@ -57,7 +57,6 @@ class CustomDatasetDataLoader(BaseDataLoader):
             shuffle=not opt.serial_batches,
             num_workers=int(opt.num_threads))        
         
-
     def load_data(self):
         return self
 

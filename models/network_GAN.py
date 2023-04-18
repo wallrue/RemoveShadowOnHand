@@ -3,7 +3,7 @@ import torch.nn as nn
 from torch.nn import init
 import functools
 from torch.optim import lr_scheduler
-from .resnet import resnext101_32x8d
+from .network_resnet import resnext101_32x8d
 # from .vgg import create_vgg
 ###############################################################################
 # Helper Functions
@@ -85,7 +85,7 @@ def define_G(input_nc, output_nc, ngf, netG, norm='batch', use_dropout=False, in
     elif netG == 'unet_32':
         net = UnetModel(input_nc, output_nc, 5, ngf, norm_layer=norm_layer, use_dropout=use_dropout)
     elif netG == 'RESNEXT':
-        net = resnext101_32x8d(pretrained=False,num_classes=output_nc,num_inputchannels=input_nc)
+        net = resnext101_32x8d(pretrained=False, num_classes=output_nc, num_inputchannels=input_nc)
         if len(gpu_ids)>0:
             assert(torch.cuda.is_available())
             net.to(gpu_ids[0])

@@ -11,11 +11,11 @@ class ShadowParamDataset(BaseDataset):
     def initialize(self, opt):
         self.opt = opt
         self.root = opt.dataroot
-        self.dir_A = os.path.join(opt.dataroot, opt.phase + 'A')
-        self.dir_B = os.path.join(opt.dataroot, opt.phase + 'B')
-        self.dir_C = os.path.join(opt.dataroot, opt.phase + 'C')
-        self.dir_param = os.path.join(opt.dataroot, opt.phase + 'params')
-        self.dir_matte = os.path.join(opt.dataroot, 'matte')
+        self.dir_A = os.path.join(opt.dataroot, opt.phase + 'shadowfull')
+        self.dir_B = os.path.join(opt.dataroot, opt.phase + 'shadowmask')
+        self.dir_C = os.path.join(opt.dataroot, opt.phase + 'shadowfree')
+        self.dir_param = os.path.join(opt.dataroot, opt.phase + 'shadowparams')
+        #self.dir_matte = os.path.join(opt.dataroot, 'shadowmatte')
         
         self.A_paths, self.imname = make_dataset(self.dir_A)
         self.A_size = len(self.A_paths)
@@ -49,22 +49,22 @@ class ShadowParamDataset(BaseDataset):
         shadow_param = np.asarray([float(i) for i in line.split(" ") if i.strip()])
         shadow_param = shadow_param[0:6]
             
-        birdy['A'] = A_img
-        birdy['B'] = B_img
-        birdy['C'] = C_img
+        birdy['shadowfull'] = A_img
+        birdy['shadowmask'] = B_img
+        birdy['shadowfree'] = C_img
         for k,im in birdy.items():
             birdy[k] = self.transformData(im)
         
         birdy['imname'] = imname
         birdy['w'] = ow
         birdy['h'] = oh
-        birdy['A_paths'] = A_path
-        birdy['B_baths'] = B_path
+        birdy['shadowfull_paths'] = A_path
+        birdy['shadowmask_baths'] = B_path
         
         #if the shadow area is too small, let's not change anything:
         if torch.sum(birdy['B']>0) < 30 :
             shadow_param=[0,1,0,1,0,1]
-        birdy['param'] = torch.FloatTensor(np.array(shadow_param))
+        birdy['shadowparams'] = torch.FloatTensor(np.array(shadow_param))
         
         return birdy 
     
