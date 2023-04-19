@@ -55,14 +55,14 @@ class ShadowParamDataset(BaseDataset):
         for k,im in birdy.items():
             birdy[k] = self.transformData(im)
         
-        birdy['imname'] = imname
+        birdy['imgname'] = imname
         birdy['w'] = ow
         birdy['h'] = oh
         birdy['shadowfull_paths'] = A_path
         birdy['shadowmask_baths'] = B_path
         
         #if the shadow area is too small, let's not change anything:
-        if torch.sum(birdy['B']>0) < 30 :
+        if torch.sum(birdy['shadowmask']>0) < 30 :
             shadow_param=[0,1,0,1,0,1]
         birdy['shadowparams'] = torch.FloatTensor(np.array(shadow_param))
         

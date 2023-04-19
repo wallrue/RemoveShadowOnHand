@@ -18,8 +18,8 @@ class DSDModel(BaseModel):
     def modify_commandline_options(parser, is_train=True):
         parser.set_defaults(pool_size=0, no_lsgan=True, norm='batch')
         parser.set_defaults(input_nc=3, output_nc=3)
-        parser.set_defaults(checkpoints_dir="C:/Users/m1101/Downloads/Shadow_Removal/SID/_Git_SID/checkpoints_DSD/")
-        parser.set_defaults(name='DSD_PalmHandDataset')
+        #parser.set_defaults(checkpoints_dir="C:/Users/m1101/Downloads/Shadow_Removal/SID/_Git_SID/checkpoints_DSD/")
+        #parser.set_defaults(name='DSD_PalmHandDataset')
         return parser
 
     def initialize(self, opt):

@@ -3,13 +3,14 @@ from collections import OrderedDict
 import time
 import numpy as np
 import torch.nn.functional as F
+from torch.autograd import Variable
 from util.image_pool import ImagePool
 from .base_model import BaseModel
 from . import network_GAN
 import util.util as util
 from PIL import ImageOps,Image
 
-class SIDModel(BaseModel):
+class SIDSTGANModel(BaseModel):
     def name(self):
         return 'Shadow Image Decomposition model ICCV19'
 
@@ -17,15 +18,16 @@ class SIDModel(BaseModel):
     def modify_commandline_options(parser, is_train=True):
         parser.set_defaults(pool_size=0, no_lsgan=True, norm='batch')
         parser.set_defaults(input_nc=3, output_nc=3)
-        parser.set_defaults(checkpoints_dir="C:/Users/m1101/Downloads/Shadow_Removal/SID/_Git_SID/checkpoints_SID-STGAN/")
+        #parser.set_defaults(checkpoints_dir="C:/Users/m1101/Downloads/Shadow_Removal/SID/_Git_SID/checkpoints_SID-STGAN/")
         # parser.set_defaults(netG='RESNEXT')
         return parser
 
     def initialize(self, opt):
         BaseModel.initialize(self, opt)
         self.isTrain = opt.isTrain
-        self.loss_names = ['G1_GAN', 'G1_L1', 'D1_real', 'D1_fake', 'G2_param', 'G2_GAN', 'M2']
+        self.loss_names = ['G1_GAN', 'G1_L1', 'D1_real', 'D1_fake', 'G2_param', 'G2_L1', 'M2']
         self.model_names = ['G1', 'D1', 'G2', 'M2']
+        self.cuda_tensor = torch.FloatTensor if self.device == torch.device('cpu') else torch.cuda.FloatTensor
         
         self.netG1 = network_GAN.define_G(opt.input_nc, 1, opt.ngf, 'unet_32', opt.norm,
                                       not opt.no_dropout, opt.init_type, opt.init_gain, self.gpu_ids)
@@ -53,7 +55,7 @@ class SIDModel(BaseModel):
                                                 lr=opt.lr, betas=(opt.beta1, 0.999), weight_decay=1e-5)
             self.optimizer_D = torch.optim.Adam(self.netD1.parameters(),
                                                 lr=opt.lr, betas=(opt.beta1, 0.999), weight_decay=1e-5)
-            self.optimizer_M = torch.optim.Adam(self.netM.parameters(),
+            self.optimizer_M = torch.optim.Adam(self.netM2.parameters(),
                                                 lr=opt.lr, betas=(opt.beta1, 0.999), weight_decay=1e-5)
             self.optimizers = [self.optimizer_G, self.optimizer_M, self.optimizer_D]
    
@@ -106,7 +108,7 @@ class SIDModel(BaseModel):
 
         # compute shadow matte
         #lit.detach if no final loss for paramnet 
-        inputM2 = torch.cat([self.input_img, self.lit, self.shadow_mask],1)
+        inputM2 = torch.cat([self.input_img, self.lit, self.fake_shadow_image],1)
         self.alpha_pred = self.netM2(inputM2)
         self.alpha_pred = (self.alpha_pred +1) /2 
         
@@ -150,18 +152,14 @@ class SIDModel(BaseModel):
         lambda_ = self.opt.lambda_L1
         self.shadow_param[:,[1,3,5]] = (self.shadow_param[:,[1,3,5]])/2 - 1.5
         self.loss_G2_param = criterion(self.shadow_param_pred, self.shadow_param) * lambda_ 
-        self.loss_G2_GAN = criterion(self.final, self.shadowfree_img) * lambda_
-        self.loss_G2 = self.loss_G2_param + self.loss_G2_GAN
+        self.loss_G2_L1 = criterion(self.final, self.shadowfree_img) * lambda_
+        self.loss_G2 = self.loss_G2_param + self.loss_G2_L1
         
         self.loss_G =  self.loss_G1 + self.loss_G2
         self.loss_G.backward()
     
-    def get_prediction(self, input_img, shadow_mask):
+    def get_prediction(self, input_img):
         self.input_img = input_img.to(self.device)
-        self.shadow_mask = shadow_mask.to(self.device)
-        
-        self.shadow_mask = (self.shadow_mask>0.9).type(torch.float)*2-1
-        self.shadow_mask_3d = (self.shadow_mask>0).type(torch.float).expand(self.input_img.shape)   
         
         w = self.input_img.shape[2]
         h = self.input_img.shape[3]
@@ -170,6 +168,8 @@ class SIDModel(BaseModel):
         
         inputG1 = self.input_img
         self.fake_shadow_image = self.netG1(inputG1)
+        self.fake_shadow_image = (self.fake_shadow_image>0.9).type(torch.float)*2-1
+        self.fake_shadow_mask_3d = (self.fake_shadow_image>0).type(torch.float).expand(self.input_img.shape)   
         
         # compute output of generator
         inputG2 = torch.cat([self.input_img, self.fake_shadow_image],1)
@@ -190,11 +190,11 @@ class SIDModel(BaseModel):
         self.lit = self.lit*mul + add
         
         # compute relit image
-        self.out = (self.input_img/2+0.5)*(1-self.shadow_mask_3d) + self.lit*self.shadow_mask_3d
+        self.out = (self.input_img/2+0.5)*(1-self.fake_shadow_mask_3d) + self.lit*self.fake_shadow_mask_3d
         self.out = self.out*2-1
         
         # compute shadow matte        
-        inputM2 = torch.cat([self.input_img, self.lit, self.shadow_mask],1)
+        inputM2 = torch.cat([self.input_img, self.lit, self.fake_shadow_image],1)
         self.alpha_pred = self.netM2(inputM2)
         self.alpha_pred = (self.alpha_pred +1) /2        
         #self.alpha_pred_3d=  self.alpha_pred.repeat(1,3,1,1)

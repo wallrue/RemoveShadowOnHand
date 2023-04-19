@@ -22,8 +22,8 @@ def progressbar(it, info_dict, size=60, out=sys.stdout): # Python3.3+
         x = int(size*n/count)
         
         taken_time = time.time() - info_dict["start time"]
-        print("{} [{}{}] {}/{} | {:.3f} secs".format(info_dict["epoch"], "#"*x, "."*(size-x), n, count, taken_time), 
-                end='\r', file=out, flush=True)
+        print("\r{} [{}{}] {}/{} | {:.3f} secs".format(info_dict["epoch"], "#"*x, "."*(size-x), n, count, taken_time), 
+                end='', file=out, flush=True)
     show(0, 1)
     for i, item in enumerate(it):
         yield i, item
@@ -57,7 +57,7 @@ def get_loss_file(log_dir):
     loss = {'train_loss': list(), 'valid_loss': list()}
     for i in data:
         my_dict = ast.literal_eval(str(i))
-        loss['train_loss'].append(my_dict['reconstruction'])
+        loss['train_loss'].append(my_dict['train_reconstruction'])
         loss['valid_loss'].append(my_dict['valid_reconstruction'])
     return loss
 
@@ -76,12 +76,11 @@ def loss_figure(loss_folder):
     for i in ax:
         i.legend()
         i.grid(True)
-    plt.show()
-    plt.savefig(os.path.join(loss_folder, 'loss_figure.png'))
+    fig.savefig(os.path.join(loss_folder, 'loss_figure.png'), dpi=100)
     
 def train_loop(opt, dataset, model): 
     cuda_tensor = torch.cuda.FloatTensor if len(opt.gpu_ids) > 0 else torch.FloatTensor
-    for epoch in range(opt.epoch_count, opt.niter + opt.niter_decay + 1):
+    for epoch in range(opt.epoch_count, 3): #opt.niter + opt.niter_decay + 1):
         epoch_start_time = time.time()
         #model.epoch = epoch
         epoch_iter = 0
@@ -103,7 +102,7 @@ def train_loop(opt, dataset, model):
             train_losses = {key: train_losses.get(key,0) + current_losses[key] for key in set(train_losses).union(current_losses)}
 
         n_train_losses = epoch_iter/opt.batch_size
-        train_losses = {key: train_losses[key]/n_train_losses for key in train_losses.keys()}
+        train_losses = {'train_reconstruction': train_losses["G2_L1"]/n_train_losses}
         current_lr = model.update_learning_rate()
         t_data = time.time() - epoch_start_time - t_comp
         print_current_losses(os.path.join(opt.checkpoints_dir, opt.name, 'train.log'), epoch, current_lr, \
@@ -113,11 +112,11 @@ def train_loop(opt, dataset, model):
         with torch.no_grad():
             dataset.working_subset = "valid"
             for _, data in enumerate(dataset, 0):
-                full_shadow_img = Variable(data['A'].type(cuda_tensor))
-                shadow_mask = Variable(data['B'].type(cuda_tensor))
-                shadowfree_img = Variable(data['C'].type(cuda_tensor))
+                full_shadow_img = Variable(data['shadowfull'].type(cuda_tensor))
+                shadow_mask = Variable(data['shadowmask'].type(cuda_tensor))
+                shadowfree_img = Variable(data['shadowfree'].type(cuda_tensor))
 
-                output = model.get_prediction(full_shadow_img, shadow_mask)        
+                output = model.get_prediction(full_shadow_img)        
                 #val_loss_G1_L1 = model.criterionL1(output['phase1'], shadow_mask)
                 valid_losses += model.criterionL1(output['final'], shadowfree_img)
                 n_valid_loss += 1
@@ -133,13 +132,15 @@ def train_loop(opt, dataset, model):
         
 if __name__=='__main__':
     train_options = TrainOptions()
-    dataset_dir = {"shadowparam": "C:/Users/m1101/Downloads/Shadow_Removal/SID/_Git_SID/data_processing/dataset/NTUST_TU/train/"}
-    training_dict = [["shadowparam", "STGAN"]]
+    dataset_dir = {"shadowparam": "C:/Users/m1101/Downloads/Shadow_Removal/SID/_Git_SID/data_processing/dataset/SYNTHETIC_HAND/"}
+    checkpoints_dir = {"shadowparam": "C:/Users/m1101/Downloads/Shadow_Removal/SID/_Git_SID/"}
+    training_dict = [["shadowparam", "SIDSTGAN"]]
     
-    for dataset_name, model_name in training_dict:    
+    for dataset_name, model_name in training_dict:
         print('============== Start training: dataset {}, model {} =============='.format(model_name, dataset_name))
         train_options.dataset_mode = dataset_name
         train_options.data_root = dataset_dir[dataset_name]
+        train_options.checkpoints_root = checkpoints_dir[dataset_name]        
         train_options.model_name = model_name
         opt = train_options.parse()
         

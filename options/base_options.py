@@ -9,7 +9,11 @@ import data
 class BaseOptions():
     def __init__(self):
         self.initialized = False
-
+        self.model_name = "" #Define in running file. Eg: "SID"
+        self.checkpoints_root = ""
+        self.dataset_mode = "" #Define in running file. Eg: "shadowparam"
+        self.data_root = "" #Define in running file. Eg: "C:/Users/m1101/Downloads/Shadow_Removal/SID/_Git_SID/data_processing/dataset/NTUST_TU/train/"
+        
     def initialize(self, parser):
         
         # data loader argument
@@ -52,9 +56,6 @@ class BaseOptions():
         # parser.add_argument('--finetuning_dir', type=str)
 
         self.initialized = True
-        self.model_name = "" #Define in running file. Eg: "SID"
-        self.dataset_mode = "" #Define in running file. Eg: "shadowparam"
-        self.data_root = "" #Define in running file. Eg: "C:/Users/m1101/Downloads/Shadow_Removal/SID/_Git_SID/data_processing/dataset/NTUST_TU/train/"
         return parser
     
     def get_known(self, parser):
@@ -67,9 +68,9 @@ class BaseOptions():
         parser.set_defaults(fineSize=256)
 
         # model setup: in gather_options by models.get_option_setter()
-        parser.set_defaults(name=self.model_name)
-        parser.set_defaults(model=self.model_name + "_" + self.dataset_mode)
-        # parser.set_defaults(checkpoints_dir="C:/Users/m1101/Downloads/Shadow_Removal/SID/_Git_SID/checkpoints_PAMI/")
+        parser.set_defaults(name=self.model_name + "_" + self.dataset_mode)
+        parser.set_defaults(model=self.model_name)
+        parser.set_defaults(checkpoints_dir=self.checkpoints_root + "\\checkpoints_" + self.model_name)
         # parser.set_defaults(name='SID_GRESNEXT_shadowparam')
         # parser.set_defaults(netG='RESNEXT')
         
@@ -95,7 +96,6 @@ class BaseOptions():
 
         # get the basic options
         basic_opt = self.get_known(parser)
-
         # modify model-related parser options
         #model_name = basic_opt.model
         model_option_setter = models.get_option_setter(self.model_name)
