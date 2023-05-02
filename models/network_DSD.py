@@ -3,6 +3,35 @@ import torch.nn.functional as F
 from torch import nn
 from .network_resnet import resnext101_32x4d
 
+def bce_logit_dst(pred, gt):
+    eposion = 1e-10
+    sigmoid_pred = torch.sigmoid(pred)
+    count_pos = torch.sum(gt)*1.0+eposion
+    count_neg = torch.sum(1.0-gt)*1.0
+    beta = count_neg/count_pos
+    beta_back = count_pos / (count_pos + count_neg)
+
+    bce_loss = nn.BCEWithLogitsLoss(pos_weight=beta)
+    loss = beta_back*bce_loss(pred, gt)
+    return loss
+
+def bce_logit_pred(pred, gt, dst1, dst2):
+    eposion = 1e-10
+    sigmoid_dst1 = torch.sigmoid(dst1)
+    sigmoid_dst2 = torch.sigmoid(dst2)
+    sigmoid_pred = torch.sigmoid(pred)
+    count_pos = torch.sum(gt)*1.0+eposion
+    count_neg = torch.sum(1.-gt)*1.0
+    beta = count_neg/count_pos
+    beta_back = count_pos/(count_pos+count_neg)
+    
+    dst_loss = beta*(1+dst2)*gt*F.binary_cross_entropy_with_logits(pred, gt, reduce=False) + \
+               (1+dst1)*(1-gt)*F.binary_cross_entropy_with_logits(pred, gt, reduce=False)
+    bce_loss = nn.BCEWithLogitsLoss(pos_weight=beta)
+    mean_loss = torch.mean(dst_loss)
+    loss = beta_back*bce_loss(pred, gt) + beta_back*mean_loss
+    return loss
+
 class ConvBlock(nn.Module):
     def __init__(self):
         super(ConvBlock, self).__init__()
@@ -39,6 +68,8 @@ class AttentionModule(nn.Module):
 class DSDNet(nn.Module):
     def __init__(self):
         super(DSDNet, self).__init__()
+        #self.training = istrain
+        
         net = resnext101_32x4d(pretrained=False)
         net = list(net.children())
         self.layer0 = nn.Sequential(*net[:3])
@@ -251,9 +282,8 @@ class DSDNet(nn.Module):
         fuse_pred_dst1 = self.fuse_predict(torch.cat((pred_down0_dst1,pred_down1_dst1,pred_down2_dst1,pred_down3_dst1,pred_down4_dst1),1))
         fuse_pred_dst2 = self.fuse_predict(torch.cat((pred_down0_dst2,pred_down1_dst2,pred_down2_dst2,pred_down3_dst2,pred_down4_dst2),1))
 
-        if self.training:
-            return fuse_pred_shad, pred_down1_shad, pred_down2_shad, pred_down3_shad, pred_down4_shad, \
+        return fuse_pred_shad, pred_down1_shad, pred_down2_shad, pred_down3_shad, pred_down4_shad, \
             fuse_pred_dst1, pred_down1_dst1, pred_down2_dst1, pred_down3_dst1, pred_down4_dst1,\
             fuse_pred_dst2, pred_down1_dst2, pred_down2_dst2, pred_down3_dst2, pred_down4_dst2, \
                    pred_down0_dst1, pred_down0_dst2, pred_down0_shad
-        return F.sigmoid(fuse_pred_shad)
+        #return F.sigmoid(fuse_pred_shad)

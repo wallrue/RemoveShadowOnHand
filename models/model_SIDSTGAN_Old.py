@@ -32,11 +32,15 @@ class SIDSTGANModel(BaseModel):
         self.netG1 = network_GAN.define_G(opt.input_nc, 1, opt.ngf, 'unet_32', opt.norm,
                                       not opt.no_dropout, opt.init_type, opt.init_gain, self.gpu_ids)
         self.netD1 = network_GAN.define_D(4, opt.ngf, 'n_layers', 3, opt.norm, True, opt.init_type, opt.init_gain, self.gpu_ids)
-        self.netG2 = SIDNet()
-            
+        
+        self.netG2 = network_GAN.define_G(opt.input_nc+1, 6, opt.ngf, 'RESNEXT', opt.norm,
+                                      not opt.no_dropout, opt.init_type, opt.init_gain, self.gpu_ids)
+        self.netM2 = network_GAN.define_G(6+1, opt.output_nc, opt.ngf, 'unet_256', opt.norm,
+                                      not opt.no_dropout, opt.init_type, opt.init_gain, self.gpu_ids)
         self.netG1.to(self.device)
         self.netD1.to(self.device)
         self.netG2.to(self.device)
+        self.netM2.to(self.device)
         
         if self.isTrain:
             #self.fake_AB_pool = ImagePool(opt.pool_size)
@@ -51,7 +55,9 @@ class SIDSTGANModel(BaseModel):
                                                 lr=opt.lr, betas=(opt.beta1, 0.999), weight_decay=1e-5)
             self.optimizer_D = torch.optim.Adam(self.netD1.parameters(),
                                                 lr=opt.lr, betas=(opt.beta1, 0.999), weight_decay=1e-5)
-            self.optimizers = [self.optimizer_G, self.optimizer_D]
+            self.optimizer_M = torch.optim.Adam(self.netM2.parameters(),
+                                                lr=opt.lr, betas=(opt.beta1, 0.999), weight_decay=1e-5)
+            self.optimizers = [self.optimizer_G, self.optimizer_M, self.optimizer_D]
    
     def set_input(self, input):
         self.input_img = input['shadowfull'].to(self.device)
@@ -66,10 +72,49 @@ class SIDSTGANModel(BaseModel):
     def forward(self):
         inputG1 = self.input_img
         self.fake_shadow_image = self.netG1(inputG1)
-        self.fake_shadow_image = (self.fake_shadow_image>0.9).type(torch.float)*2-1
+        
         # compute output of generator
         inputG2 = torch.cat([self.input_img, self.fake_shadow_image], 1)
-        self.shadow_param_pred, self.alpha_pred, self.final= self.netG2(inputG2)
+        self.shadow_param_pred = self.netG2(inputG2)
+
+        # m = self.shadow_param_pred.shape[1]
+        w = inputG2.shape[2]
+        h = inputG2.shape[3]
+        n = self.shadow_param_pred.shape[0]
+        
+        # compute lit image
+        # self.shadow_param_pred = torch.mean(self.shadow_param_pred.view([n,m,-1]),dim=2)
+        add = self.shadow_param_pred[:,[0,2,4]]
+        mul = (self.shadow_param_pred[:,[1,3,5]]*2) +3
+        
+        add = add.view(n,3,1,1).expand((n,3,w,h))
+        mul = mul.view(n,3,1,1).expand((n,3,w,h))
+        self.lit = self.input_img.clone()/2+0.5
+        self.lit = self.lit*mul + add
+        
+#         # compute lit image for ground truth
+#         addgt = self.shadow_param[:,[0,2,4]]
+#         mulgt = self.shadow_param[:,[1,3,5]]
+
+#         addgt = addgt.view(n,3,1,1).expand((n,3,w,h))
+#         mulgt = mulgt.view(n,3,1,1).expand((n,3,w,h))
+        
+#         self.litgt = self.input_img.clone()/2+0.5
+#         self.litgt = (self.litgt*mulgt+addgt)*2-1
+        
+#         # compute relit image
+#         self.out = (self.input_img/2+0.5)*(1-self.shadow_mask_3d) + self.lit*self.shadow_mask_3d
+#         self.out = self.out*2-1
+
+        # compute shadow matte
+        #lit.detach if no final loss for paramnet 
+        inputM2 = torch.cat([self.input_img, self.lit, self.fake_shadow_image],1)
+        self.alpha_pred = self.netM2(inputM2)
+        self.alpha_pred = (self.alpha_pred +1) /2 
+        
+        # compute free-shadow image
+        self.final = (self.input_img/2+0.5)*(1-self.alpha_pred) + self.lit*(self.alpha_pred)
+        self.final = self.final*2-1
                 
     def backward1(self):      
         """Calculate GAN loss for the discriminator"""
@@ -116,7 +161,47 @@ class SIDSTGANModel(BaseModel):
     def get_prediction(self, input_img):
         self.input_img = input_img.to(self.device)
         
-        self.forward1()
+        w = self.input_img.shape[2]
+        h = self.input_img.shape[3]
+        n = self.input_img.shape[0]
+        m = self.input_img.shape[1]
+        
+        inputG1 = self.input_img
+        self.fake_shadow_image = self.netG1(inputG1)
+        self.fake_shadow_image = (self.fake_shadow_image>0.9).type(torch.float)*2-1
+        self.fake_shadow_mask_3d = (self.fake_shadow_image>0).type(torch.float).expand(self.input_img.shape)   
+        
+        # compute output of generator
+        inputG2 = torch.cat([self.input_img, self.fake_shadow_image],1)
+        inputG2 = F.interpolate(inputG2,size=(256,256))
+        self.shadow_param_pred = self.netG2(inputG2)
+        self.shadow_param_pred = self.shadow_param_pred.view([n,6,-1])
+        self.shadow_param_pred = torch.mean(self.shadow_param_pred,dim=2)
+        self.shadow_param_pred[:,[1,3,5]] = (self.shadow_param_pred[:,[1,3,5]]*2)+3 
+ 
+        # compute lit image
+        add = self.shadow_param_pred[:,[0,2,4]]
+        mul = self.shadow_param_pred[:,[1,3,5]]
+        #mul = (mul +2) * 5/3          
+        n = self.shadow_param_pred.shape[0]
+        add = add.view(n,3,1,1).expand((n,3,w,h))
+        mul = mul.view(n,3,1,1).expand((n,3,w,h))
+        self.lit = self.input_img.clone()/2+0.5
+        self.lit = self.lit*mul + add
+        
+        # compute relit image
+        self.out = (self.input_img/2+0.5)*(1-self.fake_shadow_mask_3d) + self.lit*self.fake_shadow_mask_3d
+        self.out = self.out*2-1
+        
+        # compute shadow matte        
+        inputM2 = torch.cat([self.input_img, self.lit, self.fake_shadow_image],1)
+        self.alpha_pred = self.netM2(inputM2)
+        self.alpha_pred = (self.alpha_pred +1) /2        
+        #self.alpha_pred_3d=  self.alpha_pred.repeat(1,3,1,1)
+ 
+        # compute free-shadow image
+        self.final = (self.input_img/2+0.5)*(1-self.alpha_pred) + self.lit*self.alpha_pred
+        self.final = self.final*2-1
 
         RES = dict()
         RES['final']= self.final #util.tensor2im(self.final,scale =0)
@@ -155,6 +240,8 @@ class SIDSTGANModel(BaseModel):
      
         self.set_requires_grad([self.netD1], False) #Freeze D
         self.optimizer_G.zero_grad()
+        self.optimizer_M.zero_grad()
         self.backward2()
         self.optimizer_G.step()
+        self.optimizer_M.step()
 
