@@ -132,9 +132,9 @@ def train_loop(opt, dataset, model):
         
 if __name__=='__main__':
     train_options = TrainOptions()
-    dataset_dir = {"shadowparam": "C:/Users/m1101/Downloads/Shadow_Removal/SID/_Git_SID/data_processing/dataset/SYNTHETIC_HAND/"}
+    dataset_dir = {"shadowparam": "C:/Users/m1101/Downloads/Shadow_Removal/SID/_Git_SID/data_processing/dataset/NTUST_HS/"}
     checkpoints_dir = {"shadowparam": "C:/Users/m1101/Downloads/Shadow_Removal/SID/_Git_SID/"}
-    training_dict = [["shadowparam", "SIDSTGAN"]]
+    training_dict = [["shadowparam", "STGAN"]]
     
     for dataset_name, model_name in training_dict:
         print('============== Start training: dataset {}, model {} =============='.format(model_name, dataset_name))

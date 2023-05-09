@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from torch.nn import init
+from torch.autograd import Variable
 import functools
 from torch.optim import lr_scheduler
 from .network_resnet import resnext101_32x8d
@@ -123,10 +124,12 @@ def define_D(input_nc, ndf, netD,
 # but it abstracts away the need to create the target label tensor
 # that has the same size as the input
 class GANLoss(nn.Module):
-    def __init__(self, use_lsgan=True, target_real_label=1.0, target_fake_label=0.0):
+    def __init__(self, gpu_ids, use_lsgan=False, target_real_label=1.0, target_fake_label=0.0):
         super(GANLoss, self).__init__()
-        self.register_buffer('real_label', torch.tensor(target_real_label))
-        self.register_buffer('fake_label', torch.tensor(target_fake_label))
+        self.device = torch.device(gpu_ids[0]) if len(gpu_ids) > 0 else torch.device('cpu')
+        #self.cuda_tensor = torch.FloatTensor if self.device == torch.device('cpu') else torch.cuda.FloatTensor
+        self.register_buffer('real_label', torch.tensor(target_real_label, device=self.device))
+        self.register_buffer('fake_label', torch.tensor(target_fake_label, device=self.device))
         if use_lsgan:
             self.loss = nn.MSELoss()
         else:
@@ -134,10 +137,12 @@ class GANLoss(nn.Module):
 
     def get_target_tensor(self, input, target_is_real):
         if target_is_real:
-            target_tensor = self.real_label
+            #target_tensor = Variable(self.cuda_tensor(torch.ones(input.size())), requires_grad=False)
+            target_tensor = Variable(self.real_label.expand_as(input), requires_grad=False)
         else:
-            target_tensor = self.fake_label
-        return target_tensor.expand_as(input)
+            #target_tensor = Variable(self.cuda_tensor(torch.zeros(input.size())), requires_grad=False)
+            target_tensor = Variable(self.fake_label.expand_as(input), requires_grad=False)
+        return target_tensor #target_tensor.expand_as(input)
 
     def __call__(self, input, target_is_real):
         target_tensor = self.get_target_tensor(input, target_is_real)

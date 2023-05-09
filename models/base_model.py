@@ -14,26 +14,26 @@ class BaseModel():
     def modify_commandline_options(parser, is_train):
         return parser
     
-    def train(self):
-        print('switching to training mode')
-        for name in self.model_names:
-            if isinstance(name, str):
-                net = getattr(self, 'net' + name)
-                net.train()
+#     def train(self):
+#         print('switching to training mode')
+#         for name in self.model_names:
+#             if isinstance(name, str):
+#                 net = getattr(self, 'net' + name)
+#                 net.train()
                 
-    def eval(self):
-        print('switching to testing mode')
-        for name in self.model_names:
-            if isinstance(name, str):
-                net = getattr(self, 'net' + name)
-                net.eval()
+#     def eval(self):
+#         print('switching to testing mode')
+#         for name in self.model_names:
+#             if isinstance(name, str):
+#                 net = getattr(self, 'net' + name)
+#                 net.eval()
                 
     def initialize(self, opt):
         self.opt = opt
         #self.epoch = 0
         self.gpu_ids = opt.gpu_ids
         self.isTrain = opt.isTrain
-        self.device = torch.device('cuda:{}'.format(self.gpu_ids[0])) if self.gpu_ids else torch.device('cpu')
+        self.device = torch.device('cuda:{}'.format(opt.gpu_ids[0])) if len(opt.gpu_ids)>0 else torch.device('cpu')
         self.save_dir = os.path.join(opt.checkpoints_dir, opt.name)
         
         # when model doesn't vary, we set torch.backends.cudnn.benchmark to get the benefit 
@@ -93,11 +93,12 @@ class BaseModel():
 
     # save and load the networks
     def save_networks(self, epoch):
-        for name in self.model_names:
-            save_filename = '%s_net_%s.pth' % (epoch, name)
+        for model_name in self.model_names:    
+            save_filename = '%s_net_%s.pth' % (epoch, model_name)
             save_path = os.path.join(self.save_dir, save_filename)
-            net = getattr(self, 'net' + name) # get value of self.netG, if name = "G"
-            
+
+            net = getattr(self, 'net' + model_name)
+
             if len(self.gpu_ids) > 0 and torch.cuda.is_available(): # the case for multiple GPUs
                 torch.save(net.module.cpu().state_dict(), save_path)
                 net.cuda(self.gpu_ids[0])
@@ -135,10 +136,38 @@ class BaseModel():
             for key in list(state_dict.keys()):
                 self.__patch_instance_norm_state_dict(state_dict, net, key.split('.'))
             net.load_state_dict(state_dict)
+            
+#         for class_name in list(self.model_names.keys()):
+#             for atrr_name in self.model_names[class_name]:    
+#                 load_filename = '%s_net_%s.pth' % (epoch, class_name + atrr_name)
+#                 load_path = os.path.join(self.save_dir, load_filename)
+                
+#                 if class_name == "":
+#                     net = getattr(self, 'net' + atrr_name) # get value of self.netG, if name = "G"
+#                 else:
+#                     net = getattr(self, 'net' + class_name)
+#                     net = getattr(net, 'net' + atrr_name)
+            
+#                 if isinstance(net, torch.nn.DataParallel):
+#                     net = net.module
 
+#                 # loading state dict
+#                 print('loading the model from %s' % load_path)
+#                 state_dict = torch.load(load_path, map_location=str(self.device))
+#                 if hasattr(state_dict, '_metadata'):
+#                     del state_dict._metadata
+
+#                 # loop all keys to find and remove checkpoints of InstanceNorm
+#                 for key in list(state_dict.keys()):
+#                     self.__patch_instance_norm_state_dict(state_dict, net, key.split('.'))
+#                 net.load_state_dict(state_dict)
+                
     # print network information
     def print_networks(self):
         print('---------- Networks initialized -------------')
+#         for model_name in self.model_names:
+#             net = getattr(net, 'net' + model_name)
+                    
         for name in self.model_names:
             if isinstance(name, str):
                 net = getattr(self, 'net' + name)

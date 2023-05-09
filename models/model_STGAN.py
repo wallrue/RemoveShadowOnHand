@@ -7,6 +7,7 @@ from torch.autograd import Variable
 from util.image_pool import ImagePool
 from .base_model import BaseModel
 from . import network_GAN
+from . import network_STGAN
 import util.util as util
 from PIL import ImageOps,Image
 
@@ -26,20 +27,14 @@ class STGANModel(BaseModel):
         self.isTrain = opt.isTrain
         self.loss_names = ['G1_GAN', 'G1_L1', 'G2_GAN', 'G2_L1',
                            'D1_real', 'D1_fake', 'D2_real', 'D2_fake']
-        self.model_names = ['G1', 'G2', 'D1', 'D2']
+        self.model_names = ['STGAN1', 'STGAN2']
         self.cuda_tensor = torch.FloatTensor if self.device == torch.device('cpu') else torch.cuda.FloatTensor
         
-        self.netG1 = network_GAN.define_G(opt.input_nc, 1, opt.ngf, 'unet_32', opt.norm,
-                                      not opt.no_dropout, opt.init_type, opt.init_gain, self.gpu_ids)
-        self.netG2 = network_GAN.define_G(4, 3, opt.ngf, 'unet_32', opt.norm,
-                                      not opt.no_dropout, opt.init_type, opt.init_gain, self.gpu_ids)
-        self.netD1 = network_GAN.define_D(4, opt.ngf, 'n_layers', 3, opt.norm, True, opt.init_type, opt.init_gain, self.gpu_ids)
-        self.netD2 = network_GAN.define_D(7, opt.ngf, 'n_layers', 3, opt.norm, True, opt.init_type, opt.init_gain, self.gpu_ids)
+        self.netSTGAN1 = network_STGAN.define_STGAN(opt, 3, 1)
+        self.netSTGAN2 = network_STGAN.define_STGAN(opt, 4, 3)
         
-        self.netG1.to(self.device)        
-        self.netG2.to(self.device)        
-        self.netD1.to(self.device)        
-        self.netD2.to(self.device)
+#         self.STGAN1.to(self.device)        
+#         self.STGAN2.to(self.device)
         
         if self.isTrain:
             #self.fake_AB_pool = ImagePool(opt.pool_size)
@@ -48,11 +43,14 @@ class STGANModel(BaseModel):
             self.MSELoss = torch.nn.MSELoss()
             self.bce = torch.nn.BCEWithLogitsLoss().to(0) #Evaluation value 0 by BCEWithLogitsLoss
             self.criterionL1 = torch.nn.L1Loss().to(1) #Evaluation value 1 by L1Loss'
-            
+            self.GAN_loss = network_GAN.GANLoss(opt.gpu_ids)
+        
             # initialize optimizers
-            self.optimizer_G = torch.optim.Adam([{'params': self.netG1.parameters()}, {'params': self.netG2.parameters()}],
+            self.optimizer_G = torch.optim.Adam([{'params': self.netSTGAN1.module.netG.parameters()}, 
+                                                 {'params': self.netSTGAN2.module.netG.parameters()}],
                                                 lr=opt.lr, betas=(opt.beta1, 0.999), weight_decay=1e-5)
-            self.optimizer_D = torch.optim.Adam([{'params': self.netD1.parameters()}, {'params': self.netD2.parameters()}],
+            self.optimizer_D = torch.optim.Adam([{'params': self.netSTGAN1.module.netD.parameters()}, 
+                                                 {'params': self.netSTGAN2.module.netD.parameters()}],
                                                 lr=opt.lr, betas=(opt.beta1, 0.999), weight_decay=1e-5)
             self.optimizers = [self.optimizer_G, self.optimizer_D]
    
@@ -66,45 +64,48 @@ class STGANModel(BaseModel):
     
     def forward(self):
         # compute output of generator 1
-        inputG1 = self.input_img
-        self.fake_shadow_image = self.netG1(inputG1)
+        inputSTGAN1 = self.input_img
+        self.fake_shadow_image = self.netSTGAN1.module.forward_G(inputSTGAN1)
         
         # compute output of generator 2
-        inputG2 = torch.cat((self.input_img, self.fake_shadow_image), 1)
-        self.fake_free_shadow_image = self.netG2(inputG2)
+        inputSTGAN2 = torch.cat((self.input_img, self.fake_shadow_image), 1)
+        self.fake_free_shadow_image = self.netSTGAN2.module.forward_G(inputSTGAN2)
 
-        
-    def backward1(self):      
+    def forward_D(self):
         """Calculate GAN loss for the discriminator"""
-        # update D1, D2, set_requires_grad() = Freeze or not.
-
-        # calculate gradients for D1-----------------
-        fake_AB = torch.cat((self.input_img, self.fake_shadow_image), 1)  # we use GANs; we need to feed both input and output to the discriminator
-        pred_fake = self.netD1(fake_AB.detach())
-   
-        ## Real
-        real_AB = torch.cat((self.input_img, self.shadow_mask), 1)
-        pred_real = self.netD1(real_AB)
-        
-        # calculate gradients for D2-----------------
+        fake_AB = torch.cat((self.input_img, self.fake_shadow_image), 1)
+        real_AB = torch.cat((self.input_img, self.shadow_mask), 1)                                                            
+        self.pred_fake, self.pred_real = self.netSTGAN1.module.forward_D(fake_AB.detach(), real_AB)
+                                                            
         fake_ABC = torch.cat((self.input_img, self.fake_shadow_image, self.fake_free_shadow_image), 1)
-        pred_fake2 = self.netD2(fake_ABC.detach())
-
-        ## Real
-        real_ABC = torch.cat((self.input_img, self.shadow_mask, self.shadowfree_img), 1)
-        pred_real2 = self.netD2(real_ABC)
+        real_ABC = torch.cat((self.input_img, self.shadow_mask, self.shadowfree_img), 1)                                                   
+        self.pred_fake2, self.pred_real2 = self.netSTGAN2.module.forward_D(fake_ABC.detach(), real_ABC)
+                                                            
+    def backward1(self):
+#         fake_AB = torch.cat((self.input_img, self.fake_shadow_image), 1)
+#         real_AB = torch.cat((self.input_img, self.shadow_mask), 1)                                                            
+#         self.pred_fake, self.pred_real = self.netSTGAN1.module.forward_D(fake_AB.detach(), real_AB)
+                                                            
+#         fake_ABC = torch.cat((self.input_img, self.fake_shadow_image, self.fake_free_shadow_image), 1)
+#         real_ABC = torch.cat((self.input_img, self.shadow_mask, self.shadowfree_img), 1)                                                   
+#         self.pred_fake2, self.pred_real2 = self.netSTGAN2.module.forward_D(fake_ABC.detach(), real_ABC)
         
-        label_d_fake = Variable(self.cuda_tensor(np.zeros(pred_fake.size())), requires_grad=False)
-        self.loss_D1_fake = self.bce(pred_fake, label_d_fake) #input, target
+        self.loss_D1_fake = self.GAN_loss(self.pred_fake, target_is_real = 0) 
+        self.loss_D1_real = self.GAN_loss(self.pred_real, target_is_real = 1) 
+        self.loss_D2_fake = self.GAN_loss(self.pred_fake2, target_is_real = 0)                                                   
+        self.loss_D2_real = self.GAN_loss(self.pred_real2, target_is_real = 1) 
+                                                            
+#         label_d_fake = Variable(self.cuda_tensor(np.zeros(self.pred_fake.size())), requires_grad=False)
+#         self.loss_D1_fake = self.bce(self.pred_fake, label_d_fake) #input, target
         
-        label_d_real = Variable(self.cuda_tensor(np.ones(pred_fake.size())), requires_grad=False)
-        self.loss_D1_real = self.bce(pred_real, label_d_real)
+#         label_d_real = Variable(self.cuda_tensor(np.ones(self.pred_fake.size())), requires_grad=False)
+#         self.loss_D1_real = self.bce(self.pred_real, label_d_real)
         
-        label_d_fake = Variable(self.cuda_tensor(np.zeros(pred_fake2.size())), requires_grad=False)
-        self.loss_D2_fake = self.bce(pred_fake2, label_d_fake)
+#         label_d_fake = Variable(self.cuda_tensor(np.zeros(self.pred_fake2.size())), requires_grad=False)
+#         self.loss_D2_fake = self.bce(self.pred_fake2, label_d_fake)
         
-        label_d_real = Variable(self.cuda_tensor(np.ones(pred_real2.size())), requires_grad=False)
-        self.loss_D2_real = self.bce(pred_real2, label_d_real)
+#         label_d_real = Variable(self.cuda_tensor(np.ones(self.pred_real2.size())), requires_grad=False)
+#         self.loss_D2_real = self.bce(self.pred_real2, label_d_real)
         
         lambda1 = 5; lambda2 = 0.1; lambda3 = 0.1;
         loss_D1 = self.loss_D1_fake + self.loss_D1_real
@@ -113,20 +114,32 @@ class STGANModel(BaseModel):
         self.loss_D.backward()
 
     def backward2(self):
-        # calculate gradients for G1----------------------
-        fake_AB = torch.cat((self.input_img, self.fake_shadow_image), 1)
-        pred_fake = self.netD1(fake_AB.detach())
-        label_d_real = Variable(self.cuda_tensor(np.ones(pred_fake.size())), requires_grad=False)
+#         fake_AB = torch.cat((self.input_img, self.fake_shadow_image), 1)
+#         real_AB = torch.cat((self.input_img, self.shadow_mask), 1)                                                            
+#         self.pred_fake, self.pred_real = self.netSTGAN1.module.forward_D(fake_AB.detach(), real_AB)
+                                                            
+#         fake_ABC = torch.cat((self.input_img, self.fake_shadow_image, self.fake_free_shadow_image), 1)
+#         real_ABC = torch.cat((self.input_img, self.shadow_mask, self.shadowfree_img), 1)                                                   
+#         self.pred_fake2, self.pred_real2 = self.netSTGAN2.module.forward_D(fake_ABC.detach(), real_ABC)
         
-        self.loss_G1_GAN = self.bce(pred_fake, label_d_real) 
-        self.loss_G1_L1 = self.criterionL1(self.fake_shadow_image, self.shadow_mask)
+        self.loss_G1_GAN = self.GAN_loss(self.pred_fake, target_is_real = 1)
+        self.loss_G2_GAN = self.GAN_loss(self.pred_fake2, target_is_real = 1) 
+                                                            
+#         fake_AB = torch.cat((self.input_img, self.fake_shadow_image), 1)
+#         pred_fake = self.netD1(fake_AB.detach())
+#        label_d_real = Variable(self.cuda_tensor(np.ones(self.pred_fake.size())), requires_grad=False)
+        
+#        self.loss_G1_GAN = self.bce(self.pred_fake, label_d_real) 
+        
 
-        # calculate graidents for G2
-        fake_ABC = torch.cat((self.input_img, self.fake_shadow_image, self.fake_free_shadow_image), 1)
-        pred_fake = self.netD2(fake_ABC.detach())
-        label_d_real = Variable(self.cuda_tensor(np.ones(pred_fake.size())), requires_grad=False)
+#         # calculate graidents for G2
+#         fake_ABC = torch.cat((self.input_img, self.fake_shadow_image, self.fake_free_shadow_image), 1)
+#         pred_fake = self.netD2(fake_ABC.detach())
+#        label_d_real = Variable(self.cuda_tensor(np.ones(self.pred_fake.size())), requires_grad=False)
         
-        self.loss_G2_GAN = self.bce(pred_fake, label_d_real)
+#         self.loss_G2_GAN = self.bce(self.pred_fake, label_d_real)
+                                                            
+        self.loss_G1_L1 = self.criterionL1(self.fake_shadow_image, self.shadow_mask)
         self.loss_G2_L1 = self.criterionL1(self.fake_free_shadow_image, self.shadowfree_img)
         
         lambda1 = 5; lambda2 = 0.1; lambda3 = 0.1;
@@ -154,13 +167,15 @@ class STGANModel(BaseModel):
     def optimize_parameters(self):
         self.forward()
         
-        self.set_requires_grad([self.netD1, self.netD2], True)  # enable backprop for D1, D2
+        self.set_requires_grad([self.netSTGAN1.module.netD, self.netSTGAN2.module.netD], True)  # enable backprop for D1, D2
         self.optimizer_D.zero_grad() # set D1's gradients to zero
+        self.forward_D()
         self.backward1()
         self.optimizer_D.step()
      
-        self.set_requires_grad([self.netD1, self.netD2], False) #Freeze D
+        self.set_requires_grad([self.netSTGAN1.module.netD, self.netSTGAN2.module.netD], False) #Freeze D
         self.optimizer_G.zero_grad()
+        self.forward_D()
         self.backward2()
         self.optimizer_G.step()
 

@@ -109,9 +109,9 @@ def print_current_losses(log_dir, model, losses, t_comp):
         
 if __name__=='__main__':
     test_options = TestOptions()
-    dataset_dir = {"shadowparam": "C:\\Users\\m1101\\Downloads\\Shadow_Removal\\SID\\_Git_SID\\data_processing\\dataset\\NTUST_HS\\train"}
-    checkpoints_dir = {"shadowparam": "C:\\Users\\m1101\\Downloads\\Shadow_Removal\\SID\\_Git_SID"}
-    testing_dict = [["shadowparam", "SIDSTGAN"]]
+    dataset_dir = {"shadowsynthetic": "C:\\Users\\m1101\\Downloads\\Shadow_Removal\\SID\\_Git_SID\\data_processing\\dataset\\NTUST_HS"}
+    checkpoints_dir = {"shadowsynthetic": "C:\\Users\\m1101\\Downloads\\Shadow_Removal\\SID\\_Git_SID"}
+    testing_dict = [["shadowsynthetic", "DSDSID"]]
     result_dir = os.getcwd() + f"\\result_set\\"
     
     for dataset_name, model_name in testing_dict:    
