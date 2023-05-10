@@ -1,13 +1,23 @@
+###############################################################################
+# This file contains class of the dataset named ShadowSynthetic which includes 
+# full shadow images, masks of shadow, free shadow images, params of shadow
+# hand segmentation images, masks of hand, shadow inside hand images, 
+# shadow outside hand images
+###############################################################################
+
 import os.path
 import torchvision.transforms as transforms
+import torch
+import numpy as np
+from PIL import Image
 from data.base_dataset import BaseDataset
 from data.transform import get_transform_list
 from data.image_folder import make_dataset
-from PIL import Image
-import torch
-import numpy as np
 
 class ShadowSyntheticDataset(BaseDataset):
+    def name(self):
+        return 'ShadowSyntheticDataset'
+    
     def initialize(self, opt):
         self.opt = opt
         self.root = opt.dataroot
@@ -29,9 +39,8 @@ class ShadowSyntheticDataset(BaseDataset):
         self.transformShadow = transforms.Compose([transforms.ToTensor()])
      
     def __getitem__(self,index):
-        birdy = {}
+        birdy = dict()
         
-        # load A_path, B_path
         index_img = index % self.img_size
         imname = self.imname[index_img]
         img_path = self.img_paths[index_img]
@@ -40,7 +49,6 @@ class ShadowSyntheticDataset(BaseDataset):
         handshaded_path = os.path.join(self.dir_handshaded, imname.replace('.jpg','.png')) 
         handshadedless_path = os.path.join(self.dir_handshadedless, imname.replace('.jpg','.png')) 
         
-        # load A_img, B_img
         shadowfull_img = Image.open(img_path).convert('RGB')        
         ow, oh = shadowfull_img.size[0], shadowfull_img.size[1]
         w, h = np.float(shadowfull_img.size[0]), np.float(shadowfull_img.size[1])
@@ -52,12 +60,13 @@ class ShadowSyntheticDataset(BaseDataset):
         handshadedless_img = self.load_img(handshadedless_path, (w, h), img_mode = 'L')
         handimg_img = self.load_img(os.path.join(self.dir_handimg, imname), (w, h), img_mode = 'RGB')
         
-        # load shadow_param
+        # Load shadow_param
         sparam = open(os.path.join(self.dir_shadowparams,imname+'.txt'))
         line = sparam.read()
         shadow_param = np.asarray([float(i) for i in line.split(" ") if i.strip()])
         shadow_param = shadow_param[0:6]
-            
+        
+        # Finishing package of dataset information    
         birdy['shadowfull'] = shadowfull_img
         birdy['shadowmask'] = shadowmask_img
         birdy['shadowfree'] = shadowfree_img
@@ -74,18 +83,13 @@ class ShadowSyntheticDataset(BaseDataset):
         birdy['shadowfull_paths'] = img_path
         birdy['shadowmask_baths'] = shadow_path
         
-        #if the shadow area is too small, let's not change anything:
         if torch.sum(birdy['shadowmask']>0) < 30 :
             shadow_param=[0,1,0,1,0,1]
         birdy['shadowparams'] = torch.FloatTensor(np.array(shadow_param))
-        
         return birdy 
     
     def __len__(self):
         return max(self.img_size, self.shadow_size)
-
-    def name(self):
-        return 'ShadowSyntheticDataset'
     
     def load_img(self, img_path, size = (224, 224), img_mode = 'L'):
         if os.path.isfile(img_path):

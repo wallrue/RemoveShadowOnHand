@@ -1,6 +1,7 @@
-import torch
-from torch import nn
-import torch.nn.functional as F
+###############################################################################
+# This file contains loss functions used to create the model for training
+###############################################################################
+
 import math
 import cv2
 import numpy as np
@@ -20,7 +21,13 @@ def calculate_smooth_loss(pred_map):
     loss += (dx2.abs().mean() + dxdy.abs().mean() + dydx.abs().mean() + dy2.abs().mean())*weight
     return loss
 
-def calculate_psnr(img1_tensor, img2_tensor):    
+def calculate_psnr(img1_tensor, img2_tensor):
+    """Calculate PSNR score
+    
+    Parameters:
+        img1_tensor (int) -- a image to compare, range [0, 255]
+        img2_tensor (int) -- a image to compare, range [0, 255]
+    """    
     img1 = ((img1_tensor + 1.0)*255.0/2.0).cpu().numpy().astype(np.float64)
     img2 = ((img2_tensor + 1.0)*255.0/2.0).cpu().numpy().astype(np.float64)
     mse = np.mean((img1 - img2)**2)
@@ -29,10 +36,12 @@ def calculate_psnr(img1_tensor, img2_tensor):
     return 20 * math.log10(255.0 / math.sqrt(mse))
 
 def calculate_ssim(img1_tensor, img2_tensor):
-    '''calculate SSIM
-    the same outputs as MATLAB's
-    img1, img2: [0, 255]
-    '''
+    """Calculate SSIM score
+    
+    Parameters:
+        img1_tensor (int) -- a image to compare, range [0, 255]
+        img2_tensor (int) -- a image to compare, range [0, 255]
+    """
     def ssim(img1, img2):
         C1 = (0.01 * 255)**2
         C2 = (0.03 * 255)**2

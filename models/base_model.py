@@ -1,9 +1,12 @@
+###############################################################################
+# This file contains the base model class which will be inherited by 
+# other child model classes
+###############################################################################
+
 import os
-import time
 import torch
-from . import network_GAN
+from .network import network_GAN
 import util.util as util
-import numpy as np
 from collections import OrderedDict
 
 class BaseModel():
@@ -13,30 +16,15 @@ class BaseModel():
     @staticmethod
     def modify_commandline_options(parser, is_train):
         return parser
-    
-#     def train(self):
-#         print('switching to training mode')
-#         for name in self.model_names:
-#             if isinstance(name, str):
-#                 net = getattr(self, 'net' + name)
-#                 net.train()
-                
-#     def eval(self):
-#         print('switching to testing mode')
-#         for name in self.model_names:
-#             if isinstance(name, str):
-#                 net = getattr(self, 'net' + name)
-#                 net.eval()
                 
     def initialize(self, opt):
         self.opt = opt
-        #self.epoch = 0
         self.gpu_ids = opt.gpu_ids
         self.isTrain = opt.isTrain
         self.device = torch.device('cuda:{}'.format(opt.gpu_ids[0])) if len(opt.gpu_ids)>0 else torch.device('cpu')
         self.save_dir = os.path.join(opt.checkpoints_dir, opt.name)
         
-        # when model doesn't vary, we set torch.backends.cudnn.benchmark to get the benefit 
+        # When model doesn't vary, we set torch.backends.cudnn.benchmark to get the benefit 
         if opt.resize_or_crop != 'scale_width': 
             torch.backends.cudnn.benchmark = True
             
@@ -52,7 +40,6 @@ class BaseModel():
         
         self.nim = self.input_img.shape[1]
         self.shadow_mask_3d= (self.shadow_mask>0).type(torch.float).expand(self.input_img.shape)   
-        #self.shadow_mask_3d_over = (self.shadow_mask_over>0).type(torch.float).expand(self.input_img.shape)
     
     def forward(self):
         pass
@@ -67,31 +54,21 @@ class BaseModel():
         out = self.netG(inputG)
         return util.tensor2im(out)
 
-    # load and print networks; create schedulers
+    # Load and print networks; create schedulers
     def setup(self, opt, parser=None):
         print(self.name)
         if self.isTrain:
             self.schedulers = [network_GAN.get_scheduler(optimizer, opt) for optimizer in self.optimizers]
 
-        if not self.isTrain: # or opt.continue_train or opt.finetuning:
+        if not self.isTrain:
             print("LOADING %s"%(self.name))
             self.load_networks(opt.epoch)
-        self.print_networks() #opt.verbose)
-
-    # used in test time, wrapping `forward` in no_grad() so we don't save
-    # intermediate steps for backprop
-    # def test(self):
-    #     with torch.no_grad():
-    #         self.forward()
-
-    # get image paths
-    # def get_image_paths(self):
-    #     return self.image_paths
+        self.print_networks()
 
     def optimize_parameters(self):
         pass
 
-    # save and load the networks
+    # Save and load the networks
     def save_networks(self, epoch):
         for model_name in self.model_names:    
             save_filename = '%s_net_%s.pth' % (epoch, model_name)
@@ -99,7 +76,7 @@ class BaseModel():
 
             net = getattr(self, 'net' + model_name)
 
-            if len(self.gpu_ids) > 0 and torch.cuda.is_available(): # the case for multiple GPUs
+            if len(self.gpu_ids) > 0 and torch.cuda.is_available(): # The case for multiple GPUs
                 torch.save(net.module.cpu().state_dict(), save_path)
                 net.cuda(self.gpu_ids[0])
             else:
@@ -107,7 +84,7 @@ class BaseModel():
 
     def __patch_instance_norm_state_dict(self, state_dict, module, keys, i=0):
         key = keys[i]
-        if i + 1 == len(keys):  # at the end, pointing to a parameter/buffer
+        if i + 1 == len(keys):  # At the end, pointing to a parameter/buffer
             if module.__class__.__name__.startswith('InstanceNorm') and (key == 'running_mean' or key == 'running_var'):
                 if getattr(module, key) is None:
                     state_dict.pop('.'.join(keys))
@@ -121,53 +98,25 @@ class BaseModel():
             load_filename = '%s_net_%s.pth' % (epoch, name)
             load_path = os.path.join(self.save_dir, load_filename)
 
-            # the case for multiple GPUs
+            # The case for multiple GPUs
             net = getattr(self, 'net' + name)
             if isinstance(net, torch.nn.DataParallel):
                 net = net.module
               
-            # loading state dict
+            # Loading state dict
             print('loading the model from %s' % load_path)
             state_dict = torch.load(load_path, map_location=str(self.device))
             if hasattr(state_dict, '_metadata'):
                 del state_dict._metadata
             
-            # loop all keys to find and remove checkpoints of InstanceNorm
+            # Loop all keys to find and remove checkpoints of InstanceNorm
             for key in list(state_dict.keys()):
                 self.__patch_instance_norm_state_dict(state_dict, net, key.split('.'))
             net.load_state_dict(state_dict)
-            
-#         for class_name in list(self.model_names.keys()):
-#             for atrr_name in self.model_names[class_name]:    
-#                 load_filename = '%s_net_%s.pth' % (epoch, class_name + atrr_name)
-#                 load_path = os.path.join(self.save_dir, load_filename)
                 
-#                 if class_name == "":
-#                     net = getattr(self, 'net' + atrr_name) # get value of self.netG, if name = "G"
-#                 else:
-#                     net = getattr(self, 'net' + class_name)
-#                     net = getattr(net, 'net' + atrr_name)
-            
-#                 if isinstance(net, torch.nn.DataParallel):
-#                     net = net.module
-
-#                 # loading state dict
-#                 print('loading the model from %s' % load_path)
-#                 state_dict = torch.load(load_path, map_location=str(self.device))
-#                 if hasattr(state_dict, '_metadata'):
-#                     del state_dict._metadata
-
-#                 # loop all keys to find and remove checkpoints of InstanceNorm
-#                 for key in list(state_dict.keys()):
-#                     self.__patch_instance_norm_state_dict(state_dict, net, key.split('.'))
-#                 net.load_state_dict(state_dict)
-                
-    # print network information
+    # Print network information
     def print_networks(self):
         print('---------- Networks initialized -------------')
-#         for model_name in self.model_names:
-#             net = getattr(net, 'net' + model_name)
-                    
         for name in self.model_names:
             if isinstance(name, str):
                 net = getattr(self, 'net' + name)
@@ -186,9 +135,8 @@ class BaseModel():
                 scheduler.step(loss)
         lr = self.optimizers[0].param_groups[0]['lr']
         return lr
-        #print('learning rate = %.7f' % lr)
         
-    # set requies_grad=Fasle to avoid computation
+    # Set requies_grad=Fasle to avoid computation
     def set_requires_grad(self, nets, requires_grad=False):
         if not isinstance(nets, list):
             nets = [nets]

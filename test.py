@@ -1,21 +1,33 @@
+###############################################################################
+# This file is used for testing trained models. 
+# There are three major parameters in main function which needs being defined: 
+# - dataset_dir: the root folder which contains dataset (with the datasetname)
+# - checkpoints_dir: the folder to save checkpoints after training
+# - training_dict: the model to be trained (with the datasetname)
+# dataset is trained with models in training_dict in a run
+###############################################################################
+
+import sys
+import os
+import torch
+import numpy as np
+import time
+from PIL import Image
+from torch.autograd import Variable
 from options.test_options import TestOptions
 from data import CustomDatasetDataLoader
 from models import create_model
 from models.loss_function import calculate_ssim, calculate_psnr
 
-import sys
-import os
-from PIL import Image
-import torch
-from torch.autograd import Variable
-import torch.nn.functional as F
-import numpy as np
-import util.util as util
-import matplotlib.pyplot as plt
-import time
-import ast
-
-def progressbar(it, info_dict, size=60, out=sys.stdout): # Python3.3+
+def progressbar(it, info_dict, size=60, out=sys.stdout):
+    """The function for displaying progress bar 
+    
+    Parameters:
+        it (int) -- current training iteration
+        info_dict (dict) -- information to display (include start time, total epoch)
+        size (int) -- length of progress bar
+        out (int) -- the saving folder
+    """
     count = len(it)
     def show(j, batch_size):
         n = batch_size*j
@@ -29,9 +41,34 @@ def progressbar(it, info_dict, size=60, out=sys.stdout): # Python3.3+
         yield i, item
         batch_size = len(list(item.values())[0])
         show(i+1, batch_size)
-    print("", flush=True, file=out) #Do thing after ending iteration
-     
+    print("", flush=True, file=out) # Do thing after ending iteration
+      
+def print_current_losses(log_dir, model, losses, t_comp):
+    """ Print current losses on console and save the losses to the disk
+
+    Parameters:
+        log_dir (string) -- folder to save log file
+        model (string) -- model name
+        losses (OrderedDict) -- testing losses stored in the format of (name, float) pairs
+        t_comp (float) -- computational time
+    """
+    message = '{\"testing model\": \"%s\", \"computing time\": %.3f' % (model, t_comp)
+    for k, v in losses.items():
+        message += ', \"%s\": %s' % (k, v)
+    message += '}'
+
+    print(" - Result of testing : " + message)  # Print the message
+    with open(log_dir, "a+") as log_file:
+        log_file.write('%s\n' % message)  # Save the message
+        
 def evaluate(dataset, test_model, result_dir):
+    """The function is used for assessing the accuracy of test_model on dataset.
+    
+    Parameters:
+        dataset (string) -- dataset for assessing
+        test_model (string) -- test_model need to be evaluated
+        result_dir (string) -- folder for storing result
+    """
     cuda_tensor = torch.cuda.FloatTensor if len(opt.gpu_ids) > 0 else torch.FloatTensor
     PNSR_dict = {"original": 0.0, "shadowmask": 0.0, "shadowfree": 0.0}
     SSIM_dict = {"original": 0.0, "shadowmask": 0.0, "shadowfree": 0.0}
@@ -61,12 +98,7 @@ def evaluate(dataset, test_model, result_dir):
                  
         fake_shadowfree = prediction['final']
         fake_shadowmask = prediction['phase1']
-
-        # img_fake_B = (shadow_mask + 1.0)/2.0
-        # img_fake_B = (img_fake_B - 0.5)*2.0
-
-        # fake_C_ST_GAN = G2_trained(torch.cat((input_img, img_fake_B), 1))
-        # RES = test_model.get_prediction(input_img, img_fake_B)
+        
         for i in range(len(real_shadowfull)):
             img_shadowfull = real_shadowfull[i].permute(1, 2, 0)
             img_shadowmask = real_shadowmask[i].permute(1, 2, 0)
@@ -81,38 +113,37 @@ def evaluate(dataset, test_model, result_dir):
             SSIM_dict["original"] += calculate_ssim(img_shadowfree, img_shadowfull)
             SSIM_dict["shadowmask"] += calculate_ssim(img_shadowmask, pre_shadowmask)
             SSIM_dict["shadowfree"] += calculate_ssim(img_shadowfree, pre_shadowfree)
-
+            
+            # Save result of processing to list
             result_list = list()
             result_list.append(((img_shadowfull + 1.0)*255.0/2.0).cpu().numpy().astype(np.uint8))
             result_list.append(((img_shadowfree + 1.0)*255.0/2.0).cpu().numpy().astype(np.uint8))
             result_list.append(((pre_shadowfree + 1.0)*255.0/2.0).cpu().numpy().astype(np.uint8))
             
+            # Save output image after processing
             for idx, path in enumerate(path_list):
-                 data_name = path + f"\\{list_imgname[i]}"
-                 if not os.path.isfile(data_name):
+                data_name = path + f"\\{list_imgname[i]}"
+                if not os.path.isfile(data_name):
                     Image.fromarray(result_list[idx]).convert('RGB').resize((224, 224)).save(data_name)
                  
     length = len(dataset)
     PNSR_dict = {k: v / length for k, v in PNSR_dict.items()}
     SSIM_dict = {k: v / length for k, v in SSIM_dict.items()}
     return PNSR_dict, SSIM_dict, tcomp
-
-def print_current_losses(log_dir, model, losses, t_comp):
-    message = '{\"testing model\": \"%s\", \"computing time\": %.3f' % (model, t_comp)
-    for k, v in losses.items():
-        message += ', \"%s\": %s' % (k, v)
-    message += '}'
-
-    print(" - Result of testing : " + message)  # print the message
-    with open(log_dir, "a+") as log_file:
-        log_file.write('%s\n' % message)  # save the message
         
 if __name__=='__main__':
+    """The main function for testing model. There are three important parameters:
+    - dataset_dir: the root folder which contains dataset. {datasetname: path}
+    - checkpoints_dir: the folder to save checkpoints after training. {datasetname: path}
+    - training_dict: the model to be trained {datasetname: modelname}
+    Example of datasetname: shadowparam, shadowsynthetic, single
+    Example of modelname: DSDSID, SIDSTGAN, STGAN
+    """
     test_options = TestOptions()
     dataset_dir = {"shadowsynthetic": "C:\\Users\\m1101\\Downloads\\Shadow_Removal\\SID\\_Git_SID\\data_processing\\dataset\\NTUST_HS"}
     checkpoints_dir = {"shadowsynthetic": "C:\\Users\\m1101\\Downloads\\Shadow_Removal\\SID\\_Git_SID"}
     testing_dict = [["shadowsynthetic", "DSDSID"]]
-    result_dir = os.getcwd() + f"\\result_set\\"
+    result_dir = os.getcwd() + "\\result_set\\"
     
     for dataset_name, model_name in testing_dict:    
         print('============== Start testing: dataset {}, model {} =============='.format(model_name, dataset_name))
@@ -122,7 +153,7 @@ if __name__=='__main__':
         test_options.model_name = model_name
         opt = test_options.parse()
         
-        data_loader = CustomDatasetDataLoader(opt) #createDataLoader(opt)
+        data_loader = CustomDatasetDataLoader(opt)
         dataset = data_loader.load_data()
         model = create_model(opt)
         model.setup(opt)

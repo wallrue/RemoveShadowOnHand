@@ -1,9 +1,20 @@
+###############################################################################
+# This file defines class for  Distraction-aware Shadow Detection (DSDNet)
+# DSDNet is only to detect the shadow, not remove shadow
+###############################################################################
+
 import torch
 import torch.nn.functional as F
 from torch import nn
-from .network_resnet import resnext101_32x4d
+from .network_RESNET import resnext101_32x4d
 
 def bce_logit_dst(pred, gt):
+    """ Loss function for inside layers
+
+    Parameters:
+        pred (tensor) -- prediction image
+        gt (tensor) -- ground truth
+    """
     eposion = 1e-10
     sigmoid_pred = torch.sigmoid(pred)
     count_pos = torch.sum(gt)*1.0+eposion
@@ -16,6 +27,14 @@ def bce_logit_dst(pred, gt):
     return loss
 
 def bce_logit_pred(pred, gt, dst1, dst2):
+    """ Loss function for output result
+
+    Parameters:
+        pred (tensor) -- prediction image
+        gt (tensor) -- ground truth
+        dst1 (tensor) -- other ground truth (mask of shadow inside hand)
+        dst2 (tensor) -- other ground truth (mask of shadow outside hand)
+    """
     eposion = 1e-10
     sigmoid_dst1 = torch.sigmoid(dst1)
     sigmoid_dst2 = torch.sigmoid(dst2)
@@ -33,6 +52,14 @@ def bce_logit_pred(pred, gt, dst1, dst2):
     return loss
 
 class ConvBlock(nn.Module):
+    """ Convolutional Block which is typically used for DSDNet
+
+    Parameters:
+        pred (tensor) -- prediction image
+        gt (tensor) -- ground truth
+        dst1 (tensor) -- other ground truth (mask of shadow inside hand)
+        dst2 (tensor) -- other ground truth (mask of shadow outside hand)
+    """
     def __init__(self):
         super(ConvBlock, self).__init__()
         self.block1 = nn.Sequential(
@@ -53,6 +80,9 @@ class ConvBlock(nn.Module):
         return block2
 
 class AttentionModule(nn.Module):
+    """ Multi-Attention Block for an image 8x8 (64 pixels). 
+    There are 64x64/2 = 64*32 attentions (relations) so we use a conv 64, 32
+    """
     def __init__(self):
         super(AttentionModule, self).__init__()
         self.att = nn.Sequential(
@@ -68,8 +98,6 @@ class AttentionModule(nn.Module):
 class DSDNet(nn.Module):
     def __init__(self):
         super(DSDNet, self).__init__()
-        #self.training = istrain
-        
         net = resnext101_32x4d(pretrained=False)
         net = list(net.children())
         self.layer0 = nn.Sequential(*net[:3])
@@ -154,14 +182,14 @@ class DSDNet(nn.Module):
         )
 
     def forward(self, x):
-        #Backbone
+        # Backbone
         layer0 = self.layer0(x)
         layer1 = self.layer1(layer0)
         layer2 = self.layer2(layer1)
         layer3 = self.layer3(layer2)
         layer4 = self.layer4(layer3)
 
-        #Encoder -> Image Feature
+        # Encoder -> Image Feature
         down4 = self.down4(layer4)
         down3 = self.down3(layer3)
         down2 = self.down2(layer2)
@@ -286,7 +314,6 @@ class DSDNet(nn.Module):
             fuse_pred_dst1, pred_down1_dst1, pred_down2_dst1, pred_down3_dst1, pred_down4_dst1,\
             fuse_pred_dst2, pred_down1_dst2, pred_down2_dst2, pred_down3_dst2, pred_down4_dst2, \
                    pred_down0_dst1, pred_down0_dst2, pred_down0_shad
-        #return F.sigmoid(fuse_pred_shad)
 
 def define_DSD(opt):
     net = None

@@ -1,3 +1,8 @@
+###############################################################################
+# This file contains basic functions: find_model_using_name, create_model, 
+# get_option_setter, ... which is used to create the model for training
+###############################################################################
+
 import importlib
 from models.base_model import BaseModel
 

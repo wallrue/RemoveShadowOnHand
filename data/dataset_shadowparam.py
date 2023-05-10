@@ -1,13 +1,21 @@
+###############################################################################
+# This file contains class of the dataset named ShadowParam which includes 
+# full shadow images, masks of shadow, free shadow images and params of shadow 
+###############################################################################
+
 import os.path
 import torchvision.transforms as transforms
+import torch
+import numpy as np
+from PIL import Image
 from data.base_dataset import BaseDataset
 from data.transform import get_transform_list
 from data.image_folder import make_dataset
-from PIL import Image
-import torch
-import numpy as np
 
 class ShadowParamDataset(BaseDataset):
+    def name(self):
+        return 'ShadowParamDataset'
+    
     def initialize(self, opt):
         self.opt = opt
         self.root = opt.dataroot
@@ -25,9 +33,8 @@ class ShadowParamDataset(BaseDataset):
         self.transformB = transforms.Compose([transforms.ToTensor()])
      
     def __getitem__(self,index):
-        birdy = {}
+        birdy = dict()
         
-        # load A_path, B_path
         index_A = index % self.A_size
         imname = self.imname[index_A]
         A_path = self.A_paths[index_A]
@@ -36,40 +43,35 @@ class ShadowParamDataset(BaseDataset):
             B_path = os.path.join(self.dir_B, imname)
             print('MASK NOT FOUND : %s'%(B_path))
         
-        # load A_img, B_img
         A_img = Image.open(A_path).convert('RGB')        
         ow, oh = A_img.size[0], A_img.size[1]
         w, h = np.float(A_img.size[0]), np.float(A_img.size[1])
         B_img = Image.open(B_path) if os.path.isfile(B_path) else Image.fromarray(np.zeros((int(w),int(h)),dtype = np.float),mode='L')
         C_img = Image.open(os.path.join(self.dir_C, imname)).convert('RGB')
         
-        # load shadow_param
+        # Load shadow_param
         sparam = open(os.path.join(self.dir_param,imname+'.txt'))
         line = sparam.read()
         shadow_param = np.asarray([float(i) for i in line.split(" ") if i.strip()])
         shadow_param = shadow_param[0:6]
-            
+        
+        # Finishing package of dataset information 
         birdy['shadowfull'] = A_img
         birdy['shadowmask'] = B_img
         birdy['shadowfree'] = C_img
         for k,im in birdy.items():
             birdy[k] = self.transformData(im)
-        
+            
         birdy['imgname'] = imname
         birdy['w'] = ow
         birdy['h'] = oh
         birdy['shadowfull_paths'] = A_path
         birdy['shadowmask_baths'] = B_path
         
-        #if the shadow area is too small, let's not change anything:
         if torch.sum(birdy['shadowmask']>0) < 30 :
             shadow_param=[0,1,0,1,0,1]
         birdy['shadowparams'] = torch.FloatTensor(np.array(shadow_param))
-        
         return birdy 
     
     def __len__(self):
         return max(self.A_size, self.B_size)
-
-    def name(self):
-        return 'ShadowParamDataset'
