@@ -1,5 +1,5 @@
 ###############################################################################
-# This file contains definitions of SID Net and Shadow Image Decomposition
+# This file contains definitions of SID Net - Shadow Image Decomposition
 # SIDNet is only to remove the shadow but detect shadow mask
 ###############################################################################
 

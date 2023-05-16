@@ -4,8 +4,8 @@
 ###############################################################################
 
 import torch
-import numpy as np
-from torch.autograd import Variable
+#import numpy as np
+#from torch.autograd import Variable
 from .base_model import BaseModel
 from .network import network_GAN
 from .network import network_STGAN

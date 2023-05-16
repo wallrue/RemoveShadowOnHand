@@ -1,5 +1,6 @@
 ###############################################################################
-# This file contains definitions of SID Net and Shadow Image Decomposition
+# This file contains definitions of SID Net - Shadow Image Decomposition
+# PAMI means using discriminator with UNET archiecture to evaluate output 
 # SIDNet is only to remove the shadow but detect shadow mask
 ###############################################################################
 

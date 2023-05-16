@@ -16,7 +16,7 @@ def bce_logit_dst(pred, gt):
         gt (tensor) -- ground truth
     """
     eposion = 1e-10
-    sigmoid_pred = torch.sigmoid(pred)
+    #sigmoid_pred = torch.sigmoid(pred)
     count_pos = torch.sum(gt)*1.0+eposion
     count_neg = torch.sum(1.0-gt)*1.0
     beta = count_neg/count_pos
@@ -36,9 +36,9 @@ def bce_logit_pred(pred, gt, dst1, dst2):
         dst2 (tensor) -- other ground truth (mask of shadow outside hand)
     """
     eposion = 1e-10
-    sigmoid_dst1 = torch.sigmoid(dst1)
-    sigmoid_dst2 = torch.sigmoid(dst2)
-    sigmoid_pred = torch.sigmoid(pred)
+    #sigmoid_dst1 = torch.sigmoid(dst1)
+    #sigmoid_dst2 = torch.sigmoid(dst2)
+    #sigmoid_pred = torch.sigmoid(pred)
     count_pos = torch.sum(gt)*1.0+eposion
     count_neg = torch.sum(1.-gt)*1.0
     beta = count_neg/count_pos
