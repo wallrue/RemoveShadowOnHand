@@ -21,6 +21,7 @@ class BaseOptions():
         # Data loader argument
         parser.add_argument('--dataroot',  help='path to dataset')
         parser.add_argument('--dataset_mode', type=str, default='single', help='chooses kind of dataset loader. [single, shadowparam]')
+        parser.add_argument('--suffix', default='', type=str, help='customized suffix: opt.name = opt.name + suffix: e.g., {model}_{netG}_size{loadSize}')        
         parser.add_argument('--num_threads', type=int, default=2, help='# threads for loading data, num_workers')
         parser.add_argument('--batch_size', type=int, default=2, help='input batch size')
         
@@ -43,7 +44,6 @@ class BaseOptions():
         parser.add_argument('--init_gain', type=float, default=0.02, help='scaling factor for normal, xavier and orthogonal.')
         
         #parser.add_argument('--model', type=str, help='chooses which model to use. cycle_gan, pix2pix, test')
-        #parser.add_argument('--suffix', default='', type=str, help='customized suffix: opt.name = opt.name + suffix: e.g., {model}_{netG}_size{loadSize}')
         #parser.add_argument('--netD', type=str, default='basic', help='selects model to use for netD')
         #parser.add_argument('--netG', type=str, default='resnet_9blocks', help='selects model to use for netG')
         
@@ -89,13 +89,13 @@ class BaseOptions():
         if not self.initialized:
             parser = argparse.ArgumentParser(
                 formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-            parser = self.initialize(parser)
+            self.parser_pre = self.initialize(parser)
 
         # Get the basic options
-        _ = self.get_known(parser)
+        _ = self.get_known(self.parser_pre)
         # Modify model-related parser options
         model_option_setter = models.get_option_setter(self.model_name)
-        parser = model_option_setter(parser, self.isTrain)
+        parser = model_option_setter(self.parser_pre, self.isTrain)
         args = self.get_known(parser)
 
         # Modify dataset-related parser options

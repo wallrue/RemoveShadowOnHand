@@ -13,12 +13,12 @@ class SIDPAMINet(nn.Module):
         """ SIDPAMINet is a SID with discriminator D
         """
         super(SIDPAMINet, self).__init__()
-        #self.training = istrain    
+        #self.training = istrain   
         self.netG = define_G(opt.input_nc+1, 6, opt.ngf, 'RESNEXT', opt.norm,
                                       not opt.no_dropout, opt.init_type, opt.init_gain, [])
         self.netM = define_G(6+1, opt.output_nc, opt.ngf, 'unet_256', opt.norm,
                                       not opt.no_dropout, opt.init_type, opt.init_gain, [])
-        self.netD = define_D(opt.input_nc, opt.ngf, 'n_layers', 3, opt.norm, 
+        self.netD = define_D(opt.input_nc + opt.output_nc, opt.ngf, 'n_layers', 3, opt.norm, 
                                          True, opt.init_type, opt.init_gain, [])
 
     def forward_G(self, input_img, fake_shadow_image):
@@ -53,12 +53,12 @@ class SIDPAMINet(nn.Module):
         self.final = self.final*2-1
         return self.shadow_param_pred, self.alpha_pred, self.final
     
-    def backward_D(self, fake_package, real_package): 
+    def forward_D(self, fake_package, real_package): 
         pred_fake = self.netD(fake_package)
         pred_real = self.netD(real_package)
         return pred_fake, pred_real
 
-def define_SID(opt):
+def define_SIDPAMI(opt):
     net = None
     net = SIDPAMINet(opt)
     if len(opt.gpu_ids)>0:

@@ -141,7 +141,7 @@ if __name__=='__main__':
     """
     test_options = TestOptions()
     dataset_dir = {"shadowsynthetic": "C:\\Users\\m1101\\Downloads\\Shadow_Removal\\SID\\_Git_SID\\data_processing\\dataset\\NTUST_HS"}
-    checkpoints_dir = {"shadowsynthetic": "C:\\Users\\m1101\\Downloads\\Shadow_Removal\\SID\\_Git_SID"}
+    checkpoints_dir = {"shadowsynthetic": "C:\\Users\\m1101\\Downloads\\Shadow_Removal\\SID\\_Git_SID\\checkpoints"}
     testing_dict = [["shadowsynthetic", "DSDSID"]]
     result_dir = os.getcwd() + "\\result_set\\"
     

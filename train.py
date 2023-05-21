@@ -30,8 +30,8 @@ def progressbar(it, info_dict, size=60, out=sys.stdout):
     """
     count = len(it)
     def show(j, batch_size):
-        n = batch_size*j
-        x = int(size*n/count)
+        n = batch_size*j if batch_size*j < count else count
+        x = int(size*n/count) 
         
         taken_time = time.time() - info_dict["start time"]
         print("\r{} [{}{}] {}/{} | {:.3f} secs".format(info_dict["epoch"], "#"*x, "."*(size-x), n, count, taken_time), 
@@ -39,7 +39,8 @@ def progressbar(it, info_dict, size=60, out=sys.stdout):
     show(0, 1)
     for i, item in enumerate(it):
         yield i, item
-        batch_size = len(list(item.values())[0])
+        if i == 0: # Initialize batch_size value
+            batch_size = len(list(item.values())[0])
         show(i+1, batch_size)
     print("", flush=True, file=out) # Do thing after ending iteration
     
@@ -108,7 +109,7 @@ def train_loop(opt, dataset, model):
         model (string) -- model which is trained
     """
     cuda_tensor = torch.cuda.FloatTensor if len(opt.gpu_ids) > 0 else torch.FloatTensor
-    for epoch in range(opt.epoch_count, 3): #opt.niter + opt.niter_decay + 1):
+    for epoch in range(opt.epoch_count,opt.niter + opt.niter_decay + 1):
         epoch_start_time = time.time()
         epoch_iter = 0
         t_comp, t_data = 0, 0
@@ -162,12 +163,20 @@ if __name__=='__main__':
     - checkpoints_dir: the folder to save checkpoints after training. {datasetname: path}
     - training_dict: the model to be trained {datasetname: modelname}
     Example of datasetname: shadowparam, shadowsynthetic, single
-    Example of modelname: DSDSID, SIDSTGAN, STGAN
+    Example of modelname: STGAN, DSDSID, SIDSTGAN, SIDPAMISTGAN
     """
     train_options = TrainOptions()
-    dataset_dir = {"shadowparam": "C:/Users/m1101/Downloads/Shadow_Removal/SID/_Git_SID/data_processing/dataset/NTUST_HS/"}
-    checkpoints_dir = {"shadowparam": "C:/Users/m1101/Downloads/Shadow_Removal/SID/_Git_SID/"}
-    training_dict = [["shadowparam", "STGAN"]]
+    dataset_dir = {"shadowparam": "C:/Users/m1101/Downloads/Shadow_Removal/SID/_Git_SID/data_processing/dataset/NTUST_HS/",
+                   "shadowsynthetic": "C:/Users/m1101/Downloads/Shadow_Removal/SID/_Git_SID/data_processing/dataset/SYNTHETIC_HAND/"}
+    checkpoints_dir = {"shadowparam": "C:/Users/m1101/Downloads/Shadow_Removal/SID/_Git_SID/checkpoints/",
+                       "shadowsynthetic": "C:/Users/m1101/Downloads/Shadow_Removal/SID/_Git_SID/checkpoints/"}
+    training_dict = [#["shadowparam", "STGAN"], 
+                     #["shadowparam", "SIDSTGAN"], 
+                     #["shadowparam", "SIDPAMISTGAN"], 
+                     #["shadowsynthetic", "STGAN"], 
+                     #["shadowsynthetic", "SIDSTGAN"], 
+                     #["shadowsynthetic", "SIDPAMISTGAN"], 
+                     ["shadowsynthetic", "DSDSID"]]
     
     for dataset_name, model_name in training_dict:
         print('============== Start training: dataset {}, model {} =============='.format(model_name, dataset_name))

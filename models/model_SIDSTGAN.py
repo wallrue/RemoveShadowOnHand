@@ -93,7 +93,7 @@ class SIDSTGANModel(BaseModel):
         lambda_ = 100
         self.shadow_param[:,[1,3,5]] = (self.shadow_param[:,[1,3,5]])/2 - 1.5
         self.loss_G2_param = self.criterionL1 (self.shadow_param_pred, self.shadow_param) * lambda_ 
-        self.loss_G2_L1 = self.criterionL1 (self.final, self.shadowfree_img) * lambda_
+        self.loss_G2_L1 = self.criterionL1 (self.fake_free_shadow_image, self.shadowfree_img) * lambda_
         self.loss_G2 = self.loss_G2_param + self.loss_G2_L1
         
         self.loss_G =  self.loss_G1 + self.loss_G2
@@ -104,7 +104,7 @@ class SIDSTGANModel(BaseModel):
         self.forward()
 
         RES = dict()
-        RES['final']= self.final #util.tensor2im(self.final,scale =0)
+        RES['final']= self.fake_free_shadow_image #util.tensor2im(self.final,scale =0)
         RES['phase1'] = self.fake_shadow_image #util.tensor2im(self.out,scale =0)
         #RES['param']= self.shadow_param_pred.detach().cpu() 
         #RES['matte'] = util.tensor2im(self.alpha_pred.detach().cpu()/2,scale =0)
