@@ -61,7 +61,7 @@ def print_current_losses(log_dir, model, losses, t_comp):
     with open(log_dir, "a+") as log_file:
         log_file.write('%s\n' % message)  # Save the message
         
-def evaluate(dataset, test_model, result_dir):
+def evaluate(dataset, test_model, result_dir, folder_name):
     """The function is used for assessing the accuracy of test_model on dataset.
     
     Parameters:
@@ -73,7 +73,7 @@ def evaluate(dataset, test_model, result_dir):
     PNSR_dict = {"original": 0.0, "shadowmask": 0.0, "shadowfree": 0.0}
     SSIM_dict = {"original": 0.0, "shadowmask": 0.0, "shadowfree": 0.0}
     
-    path_list = [result_dir + "//original", result_dir + "//groudtruth", result_dir + f"//{model_name}"]
+    path_list = [result_dir + "//original", result_dir + "//groudtruth", result_dir + f"//{folder_name}"]
     if not os.path.exists(result_dir):
         os.mkdir(result_dir)
     for path in path_list:
@@ -140,9 +140,15 @@ if __name__=='__main__':
     Example of modelname: DSDSID, SIDSTGAN, STGAN
     """
     test_options = TestOptions()
-    dataset_dir = {"shadowsynthetic": "C:\\Users\\m1101\\Downloads\\Shadow_Removal\\SID\\_Git_SID\\data_processing\\dataset\\NTUST_HS"}
-    checkpoints_dir = {"shadowsynthetic": "C:\\Users\\m1101\\Downloads\\Shadow_Removal\\SID\\_Git_SID\\checkpoints"}
-    testing_dict = [["shadowsynthetic", "DSDSID"]]
+    dataset_dir = {"shadowparam": "C:/Users/lemin/Downloads/NTUST_HS",
+                   "shadowsynthetic": "C:/Users/lemin/Downloads/NTUST_HS"}
+    checkpoints_dir = {"shadowparam": "C:/Users/lemin/Downloads/checkpoints/",
+                       "shadowsynthetic": "C:/Users/lemin/Downloads/checkpoints/"}
+    testing_dict = [#["shadowparam", "STGAN"],
+                    #["shadowparam", "SIDSTGAN"],
+                    #["shadowparam", "SIDPAMISTGAN"], 
+                    #["shadowsynthetic", "STGAN"], 
+                    ["shadowsynthetic", "SIDSTGAN"]]
     result_dir = os.getcwd() + "\\result_set\\"
     
     for dataset_name, model_name in testing_dict:    
@@ -158,6 +164,25 @@ if __name__=='__main__':
         model = create_model(opt)
         model.setup(opt)
         
-        PNSR_score, SSIM_score, computing_time = evaluate(dataset, model, result_dir)
+        PNSR_score, SSIM_score, computing_time = evaluate(dataset, model, result_dir, f"{model_name}_{dataset_name}")
         print_current_losses(os.path.join(result_dir, 'valid.log'), model_name, {"PNSR_score": PNSR_score, "SSIM_score": SSIM_score}, computing_time)
 
+#-----------------------------
+    dataset_dir = {"shadowparam": "C:/Users/lemin/Downloads/NTUST_TU",
+                   "shadowsynthetic": "C:/Users/lemin/Downloads/NTUST_TU"}
+    result_dir = os.getcwd() + "\\result_set_TU\\"
+    for dataset_name, model_name in testing_dict:    
+        print('============== Start testing: dataset {}, model {} =============='.format(model_name, dataset_name))
+        test_options.dataset_mode = dataset_name
+        test_options.data_root = dataset_dir[dataset_name]
+        test_options.checkpoints_root = checkpoints_dir[dataset_name]          
+        test_options.model_name = model_name
+        opt = test_options.parse()
+        
+        data_loader = CustomDatasetDataLoader(opt)
+        dataset = data_loader.load_data()
+        model = create_model(opt)
+        model.setup(opt)
+        
+        PNSR_score, SSIM_score, computing_time = evaluate(dataset, model, result_dir, f"{model_name}_{dataset_name}")
+        print_current_losses(os.path.join(result_dir, 'valid.log'), model_name, {"PNSR_score": PNSR_score, "SSIM_score": SSIM_score}, computing_time)

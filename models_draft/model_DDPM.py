@@ -35,8 +35,6 @@ class SIDSTGANModel(BaseModel):
         self.netG1.to(self.device)
         self.netG2.to(self.device)
         
-        self.netG1_module = self.netG1.module if len(opt.gpu_ids) > 0 else self.netG1
-        
         if self.isTrain:
             # Define loss functions
             self.MSELoss = torch.nn.MSELoss()
@@ -45,10 +43,10 @@ class SIDSTGANModel(BaseModel):
             self.GAN_loss = network_GAN.GANLoss(opt.gpu_ids)
         
             # Initialize optimizers
-            self.optimizer_G = torch.optim.Adam([{'params': self.netG1_module.netG.parameters()}, 
+            self.optimizer_G = torch.optim.Adam([{'params': self.netG1.module.netG.parameters()}, 
                                                  {'params': self.netG2.parameters()}],
                                                 lr=opt.lr, betas=(opt.beta1, 0.999), weight_decay=1e-5)
-            self.optimizer_D = torch.optim.Adam(self.netG1_module.netD.parameters(),
+            self.optimizer_D = torch.optim.Adam(self.netG1.module.netD.parameters(),
                                                 lr=opt.lr, betas=(opt.beta1, 0.999), weight_decay=1e-5)
             self.optimizers = [self.optimizer_G, self.optimizer_D]
    
@@ -64,7 +62,7 @@ class SIDSTGANModel(BaseModel):
     def forward(self):
         # Compute output of generator 1
         inputSTGAN1 = self.input_img
-        self.fake_shadow_image = self.netG1_module.forward_G(inputSTGAN1)
+        self.fake_shadow_image = self.netG1.module.forward_G(inputSTGAN1)
         
         # Compute output of generator 2
         self.fake_shadow_image = (self.fake_shadow_image>0.9).type(torch.float)*2-1
@@ -73,7 +71,7 @@ class SIDSTGANModel(BaseModel):
     def forward_D(self):
         fake_AB = torch.cat((self.input_img, self.fake_shadow_image), 1)
         real_AB = torch.cat((self.input_img, self.shadow_mask), 1)                                                            
-        self.pred_fake, self.pred_real = self.netG1_module.forward_D(fake_AB.detach(), real_AB)
+        self.pred_fake, self.pred_real = self.netG1.module.forward_D(fake_AB.detach(), real_AB)
         
     def backward1(self):      
         self.loss_D1_fake = self.GAN_loss(self.pred_fake, target_is_real = 0) 
@@ -95,7 +93,7 @@ class SIDSTGANModel(BaseModel):
         lambda_ = 100
         self.shadow_param[:,[1,3,5]] = (self.shadow_param[:,[1,3,5]])/2 - 1.5
         self.loss_G2_param = self.criterionL1 (self.shadow_param_pred, self.shadow_param) * lambda_ 
-        self.loss_G2_L1 = self.criterionL1 (self.fake_free_shadow_image, self.shadowfree_img) * lambda_
+        self.loss_G2_L1 = self.criterionL1 (self.final, self.shadowfree_img) * lambda_
         self.loss_G2 = self.loss_G2_param + self.loss_G2_L1
         
         self.loss_G =  self.loss_G1 + self.loss_G2
@@ -106,7 +104,7 @@ class SIDSTGANModel(BaseModel):
         self.forward()
 
         RES = dict()
-        RES['final']= self.fake_free_shadow_image #util.tensor2im(self.final,scale =0)
+        RES['final']= self.final #util.tensor2im(self.final,scale =0)
         RES['phase1'] = self.fake_shadow_image #util.tensor2im(self.out,scale =0)
         #RES['param']= self.shadow_param_pred.detach().cpu() 
         #RES['matte'] = util.tensor2im(self.alpha_pred.detach().cpu()/2,scale =0)
@@ -115,13 +113,13 @@ class SIDSTGANModel(BaseModel):
     def optimize_parameters(self):
         self.forward()
         
-        self.set_requires_grad(self.netG1_module.netD, True)  # Enable backprop for D1, D2
+        self.set_requires_grad(self.netG1.module.netD, True)  # Enable backprop for D1, D2
         self.optimizer_D.zero_grad()
         self.forward_D()
         self.backward1()
         self.optimizer_D.step()
      
-        self.set_requires_grad(self.netG1_module.netD, False) # Freeze D
+        self.set_requires_grad(self.netG1.module.netD, False) # Freeze D
         self.optimizer_G.zero_grad()
         self.forward_D()
         self.backward2()

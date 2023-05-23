@@ -9,9 +9,9 @@ import torch
 from .base_model import BaseModel
 from .network import network_GAN
 from .network import network_STGAN
-from .network.network_SID import define_SID
+from .network.network_SIDPAMIwI import define_SIDPAMIwINet
 
-class SIDSTGANModel(BaseModel):
+class SIDPAMIwISTGANModel(BaseModel):
     def name(self):
         return 'Shadow Image Decomposition & Stacked Conditional GAN'
 
@@ -25,12 +25,12 @@ class SIDSTGANModel(BaseModel):
         BaseModel.initialize(self, opt)
         self.isTrain = opt.isTrain
         self.loss_names = ['G1_GAN', 'G1_L1', 'D1_real', 'D1_fake', 
-                           'G2_param', 'G2_L1']
+                           'G2_param', 'G2_L1', 'G2_L1_I']
         self.model_names = {'G1', 'G2'}
         
 
         self.netG1 = network_STGAN.define_STGAN(opt, 3, 1)
-        self.netG2 = define_SID(opt)
+        self.netG2 = define_SIDPAMIwINet(opt)
             
         self.netG1.to(self.device)
         self.netG2.to(self.device)
@@ -68,7 +68,7 @@ class SIDSTGANModel(BaseModel):
         
         # Compute output of generator 2
         self.fake_shadow_image = (self.fake_shadow_image>0.9).type(torch.float)*2-1
-        self.shadow_param_pred, self.alpha_pred, self.fake_free_shadow_image = self.netG2(self.input_img, self.fake_shadow_image)
+        self.shadow_param_pred, self.alpha_pred, self.fake_free_shadow_image, self.fake_free_shadow_image_I = self.netG2(self.input_img, self.fake_shadow_image)
                 
     def forward_D(self):
         fake_AB = torch.cat((self.input_img, self.fake_shadow_image), 1)
@@ -94,9 +94,10 @@ class SIDSTGANModel(BaseModel):
         # Calculate gradients for G2----------------------
         lambda_ = 100
         self.shadow_param[:,[1,3,5]] = (self.shadow_param[:,[1,3,5]])/2 - 1.5
-        self.loss_G2_param = self.criterionL1 (self.shadow_param_pred, self.shadow_param) * lambda_ 
+        self.loss_G2_param = self.criterionL1(self.shadow_param_pred, self.shadow_param) * lambda_ 
         self.loss_G2_L1 = self.criterionL1 (self.fake_free_shadow_image, self.shadowfree_img) * lambda_
-        self.loss_G2 = self.loss_G2_param + self.loss_G2_L1
+        self.loss_G2_L1_I = criterion(self.fake_free_shadow_image_I,self.shadowfree_img) * lambda_
+        self.loss_G2 = self.loss_G2_param + self.loss_G2_L1 + self.loss_G2_L1_I
         
         self.loss_G =  self.loss_G1 + self.loss_G2
         self.loss_G.backward()
@@ -106,7 +107,7 @@ class SIDSTGANModel(BaseModel):
         self.forward()
 
         RES = dict()
-        RES['final']= self.fake_free_shadow_image #util.tensor2im(self.final,scale =0)
+        RES['final']= self.fake_free_shadow_image_I  #util.tensor2im(self.final,scale =0)
         RES['phase1'] = self.fake_shadow_image #util.tensor2im(self.out,scale =0)
         #RES['param']= self.shadow_param_pred.detach().cpu() 
         #RES['matte'] = util.tensor2im(self.alpha_pred.detach().cpu()/2,scale =0)
