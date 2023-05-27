@@ -73,7 +73,9 @@ def evaluate(dataset, test_model, result_dir, folder_name):
     PNSR_dict = {"original": 0.0, "shadowmask": 0.0, "shadowfree": 0.0}
     SSIM_dict = {"original": 0.0, "shadowmask": 0.0, "shadowfree": 0.0}
     
-    path_list = [result_dir + "//original", result_dir + "//groudtruth", result_dir + f"//{folder_name}"]
+    path_list = [result_dir + "//original", 
+                 result_dir + "//groudtruth", 
+                 result_dir + f"//{folder_name}"]
     if not os.path.exists(result_dir):
         os.mkdir(result_dir)
     for path in path_list:
@@ -100,10 +102,11 @@ def evaluate(dataset, test_model, result_dir, folder_name):
         fake_shadowmask = prediction['phase1']
         
         for i in range(len(real_shadowfull)):
+            img_hand = (fake_shadowmask[i]>0.5)*real_shadowfull[i] #!
             img_shadowfull = real_shadowfull[i].permute(1, 2, 0)
-            img_shadowmask = real_shadowmask[i].permute(1, 2, 0)
+            img_shadowmask = real_shadowmask[i][0] #.permute(1, 2, 0)
             img_shadowfree = real_shadowfree[i].permute(1, 2, 0)
-            pre_shadowmask = fake_shadowmask[i].data.permute(1, 2, 0)
+            pre_shadowmask = fake_shadowmask[i][0].data #.permute(1, 2, 0)
             pre_shadowfree = fake_shadowfree[i].data.permute(1, 2, 0)
 
             PNSR_dict["original"] += calculate_psnr(img_shadowfree, img_shadowfull)
@@ -113,7 +116,6 @@ def evaluate(dataset, test_model, result_dir, folder_name):
             SSIM_dict["original"] += calculate_ssim(img_shadowfree, img_shadowfull)
             SSIM_dict["shadowmask"] += calculate_ssim(img_shadowmask, pre_shadowmask)
             SSIM_dict["shadowfree"] += calculate_ssim(img_shadowfree, pre_shadowfree)
-            
             # Save result of processing to list
             result_list = list()
             result_list.append(((img_shadowfull + 1.0)*255.0/2.0).cpu().numpy().astype(np.uint8))
@@ -126,6 +128,13 @@ def evaluate(dataset, test_model, result_dir, folder_name):
                 if not os.path.isfile(data_name):
                     Image.fromarray(result_list[idx]).convert('RGB').resize((224, 224)).save(data_name)
                  
+            my_img = ((img_hand.permute(1, 2, 0) + 1.0)*255.0/2.0).cpu().numpy().astype(np.uint8)
+            my_img1 = ((pre_shadowmask + 1.0)*255.0/2.0).cpu().numpy().astype(np.uint8)
+            pixel_value = [np.mean(my_img[:,:,0]), np.mean(my_img[:,:,1]), np.mean(my_img[:,:,2])]
+            txt_string = str(int(pixel_value[0])) + "_" + str(int(pixel_value[1])) + "_" + str(int(pixel_value[2])) + "_" + str(int(pixel_value[1]  + pixel_value[2] + pixel_value[0]))
+            Image.fromarray(my_img).resize((224, 224)).save(result_dir + "//handmask_test" + f"\\{list_imgname[i][:-4]}" + "_" + txt_string + ".png")   
+            Image.fromarray(my_img1).resize((224, 224)).save(result_dir + "//mask_test" + f"\\{list_imgname[i]}")   
+    
     length = len(dataset)
     PNSR_dict = {k: v / length for k, v in PNSR_dict.items()}
     SSIM_dict = {k: v / length for k, v in SSIM_dict.items()}
@@ -140,15 +149,17 @@ if __name__=='__main__':
     Example of modelname: DSDSID, SIDSTGAN, STGAN
     """
     test_options = TestOptions()
-    dataset_dir = {"shadowparam": "C:/Users/lemin/Downloads/NTUST_HS",
-                   "shadowsynthetic": "C:/Users/lemin/Downloads/NTUST_HS"}
-    checkpoints_dir = {"shadowparam": "C:/Users/lemin/Downloads/checkpoints/",
-                       "shadowsynthetic": "C:/Users/lemin/Downloads/checkpoints/"}
+    dataset_dir = {"shadowparam": "C:/Users/m1101/Downloads/Shadow_Removal/SID/_Git_SID/data_processing/dataset/NTUST_HS/",
+                   "shadowsynthetic": "C:/Users/m1101/Downloads/Shadow_Removal/SID/_Git_SID/data_processing/dataset/NTUST_HS_Test/"}
+    checkpoints_dir = {"shadowparam": "C:/Users/m1101/Downloads/Shadow_Removal/SID/_Git_SID/checkpoints/",
+                       "shadowsynthetic": "C:/Users/m1101/Downloads/Shadow_Removal/SID/_Git_SID/checkpoints/"}
     testing_dict = [#["shadowparam", "STGAN"],
-                    #["shadowparam", "SIDSTGAN"],
-                    #["shadowparam", "SIDPAMISTGAN"], 
-                    #["shadowsynthetic", "STGAN"], 
-                    ["shadowsynthetic", "SIDSTGAN"]]
+                    # ["shadowparam", "SIDSTGAN"],
+                    # ["shadowparam", "SIDPAMISTGAN"], 
+                    # ["shadowsynthetic", "STGAN"], 
+                    # ["shadowsynthetic", "SIDSTGAN"], 
+                    ["shadowsynthetic", "STGANwHand"],
+                    ["shadowsynthetic", "STGANwHand"]]
     result_dir = os.getcwd() + "\\result_set\\"
     
     for dataset_name, model_name in testing_dict:    
@@ -166,23 +177,25 @@ if __name__=='__main__':
         
         PNSR_score, SSIM_score, computing_time = evaluate(dataset, model, result_dir, f"{model_name}_{dataset_name}")
         print_current_losses(os.path.join(result_dir, 'valid.log'), model_name, {"PNSR_score": PNSR_score, "SSIM_score": SSIM_score}, computing_time)
-
+        
+        #dataset_dir[dataset_name] = "C:/Users/m1101/Downloads/Shadow_Removal/SID/_Git_SID/data_processing/dataset/NTUST_HS_Test/"
+        
 #-----------------------------
-    dataset_dir = {"shadowparam": "C:/Users/lemin/Downloads/NTUST_TU",
-                   "shadowsynthetic": "C:/Users/lemin/Downloads/NTUST_TU"}
-    result_dir = os.getcwd() + "\\result_set_TU\\"
-    for dataset_name, model_name in testing_dict:    
-        print('============== Start testing: dataset {}, model {} =============='.format(model_name, dataset_name))
-        test_options.dataset_mode = dataset_name
-        test_options.data_root = dataset_dir[dataset_name]
-        test_options.checkpoints_root = checkpoints_dir[dataset_name]          
-        test_options.model_name = model_name
-        opt = test_options.parse()
+    # dataset_dir = {"shadowparam": "C:/Users/lemin/Downloads/NTUST_TU",
+    #                "shadowsynthetic": "C:/Users/lemin/Downloads/NTUST_TU"}
+    # result_dir = os.getcwd() + "\\result_set_TU\\"
+    # for dataset_name, model_name in testing_dict:    
+    #     print('============== Start testing: dataset {}, model {} =============='.format(model_name, dataset_name))
+    #     test_options.dataset_mode = dataset_name
+    #     test_options.data_root = dataset_dir[dataset_name]
+    #     test_options.checkpoints_root = checkpoints_dir[dataset_name]          
+    #     test_options.model_name = model_name
+    #     opt = test_options.parse()
         
-        data_loader = CustomDatasetDataLoader(opt)
-        dataset = data_loader.load_data()
-        model = create_model(opt)
-        model.setup(opt)
+    #     data_loader = CustomDatasetDataLoader(opt)
+    #     dataset = data_loader.load_data()
+    #     model = create_model(opt)
+    #     model.setup(opt)
         
-        PNSR_score, SSIM_score, computing_time = evaluate(dataset, model, result_dir, f"{model_name}_{dataset_name}")
-        print_current_losses(os.path.join(result_dir, 'valid.log'), model_name, {"PNSR_score": PNSR_score, "SSIM_score": SSIM_score}, computing_time)
+    #     PNSR_score, SSIM_score, computing_time = evaluate(dataset, model, result_dir, f"{model_name}_{dataset_name}")
+    #     print_current_losses(os.path.join(result_dir, 'valid.log'), model_name, {"PNSR_score": PNSR_score, "SSIM_score": SSIM_score}, computing_time)

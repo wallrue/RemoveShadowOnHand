@@ -142,12 +142,16 @@ def train_loop(opt, dataset, model):
                 full_shadow_img = Variable(data['shadowfull'].type(cuda_tensor))
                 shadow_mask = Variable(data['shadowmask'].type(cuda_tensor))
                 shadowfree_img = Variable(data['shadowfree'].type(cuda_tensor))
+                
+                #hand_mask = Variable(data['handmask'].type(cuda_tensor))
+                shadowfree_img = Variable(data['handimg'].type(cuda_tensor))
 
                 output = model.get_prediction(full_shadow_img)        
                 #val_loss_G1_L1 = model.criterionL1(output['phase1'], shadow_mask) # Another loss (shadow detect, hand segment,...)
                 valid_losses += model.criterionL1(output['final'], shadowfree_img)
                 n_valid_loss += 1
 
+    
         valid_losses = valid_losses/ n_valid_loss
         total_losses = {"valid_reconstruction": valid_losses, **train_losses} #merging 2 dicts
         print_current_losses(os.path.join(opt.checkpoints_dir, opt.name, 'valid.log'), epoch, current_lr, \
@@ -176,7 +180,7 @@ if __name__=='__main__':
                      #["shadowsynthetic", "STGAN"], 
                      #["shadowsynthetic", "SIDSTGAN"], 
                      #["shadowsynthetic", "SIDPAMISTGAN"], 
-                     ["shadowsynthetic", "DSDSID"]]
+                     ["shadowsynthetic", "STGANwHand"]]
     
     for dataset_name, model_name in training_dict:
         print('============== Start training: dataset {}, model {} =============='.format(model_name, dataset_name))

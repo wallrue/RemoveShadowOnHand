@@ -3,7 +3,7 @@ from .base_model import BaseModel
 from .network import network_GAN
 from .network import network_STGAN
 
-class STGANModel(BaseModel):
+class STGANwHandModel(BaseModel):
     def name(self):
         return 'Stacked Conditional Generative Adversarial Networks'
 
@@ -22,7 +22,7 @@ class STGANModel(BaseModel):
         self.cuda_tensor = torch.FloatTensor if self.device == torch.device('cpu') else torch.cuda.FloatTensor
         
         self.netSTGAN1 = network_STGAN.define_STGAN(opt, 3, 1)
-        self.netSTGAN2 = network_STGAN.define_STGAN(opt, 4, 3)
+        self.netSTGAN2 = network_STGAN.define_STGAN(opt, 3, 3)
         
         self.netSTGAN1_module = self.netSTGAN1.module if len(opt.gpu_ids) > 0 else self.netSTGAN1
         self.netSTGAN2_module = self.netSTGAN2.module if len(opt.gpu_ids) > 0 else self.netSTGAN2
@@ -45,29 +45,29 @@ class STGANModel(BaseModel):
    
     def set_input(self, input):
         self.input_img = input['shadowfull'].to(self.device)
-        self.shadow_mask = input['shadowmask'].to(self.device)
-        self.shadowfree_img = input['shadowfree'].to(self.device)
+        self.hand_mask = input['handmask'].to(self.device)
+        self.hand_img = input['handimg'].to(self.device)
         
-        self.shadow_mask = (self.shadow_mask>0.9).type(torch.float)*2-1
+        self.hand_mask = (self.hand_mask>0.9).type(torch.float) #*2-1
         self.nim = self.input_img.shape[1]
     
     def forward(self):
         # Compute output of generator 1
         inputSTGAN1 = self.input_img
-        self.fake_shadow_image = self.netSTGAN1_module.forward_G(inputSTGAN1)
+        self.fake_hand_mask = self.netSTGAN1_module.forward_G(inputSTGAN1)
         
         # Compute output of generator 2
-        inputSTGAN2 = torch.cat((self.input_img, self.fake_shadow_image), 1)
-        self.fake_free_shadow_image = self.netSTGAN2_module.forward_G(inputSTGAN2)
+        inputSTGAN2 = (self.fake_hand_mask>0)*self.input_img #extract hand part
+        self.fake_hand_img = self.netSTGAN2_module.forward_G(inputSTGAN2)
 
     def forward_D(self):
         """Calculate GAN loss for the discriminator"""
-        fake_AB = torch.cat((self.input_img, self.fake_shadow_image), 1)
-        real_AB = torch.cat((self.input_img, self.shadow_mask), 1)                                                            
+        fake_AB = torch.cat((self.input_img, self.fake_hand_mask), 1)
+        real_AB = torch.cat((self.input_img, self.hand_mask), 1)                                                            
         self.pred_fake, self.pred_real = self.netSTGAN1_module.forward_D(fake_AB.detach(), real_AB)
                                                             
-        fake_ABC = torch.cat((self.input_img, self.fake_shadow_image, self.fake_free_shadow_image), 1)
-        real_ABC = torch.cat((self.input_img, self.shadow_mask, self.shadowfree_img), 1)                                                   
+        fake_ABC = torch.cat((self.input_img, self.fake_hand_img), 1)
+        real_ABC = torch.cat((self.input_img, self.hand_img), 1)                                                   
         self.pred_fake2, self.pred_real2 = self.netSTGAN2_module.forward_D(fake_ABC.detach(), real_ABC)
                                                             
     def backward1(self):
@@ -76,7 +76,7 @@ class STGANModel(BaseModel):
         self.loss_D2_fake = self.GAN_loss(self.pred_fake2, target_is_real = 0)                                                   
         self.loss_D2_real = self.GAN_loss(self.pred_real2, target_is_real = 1) 
         
-        lambda2 = 0.1; lambda3 = 0.1;
+        lambda2 = 0.5; lambda3 = 0.5;
         loss_D1 = self.loss_D1_fake + self.loss_D1_real
         loss_D2 = self.loss_D2_fake + self.loss_D2_real
         self.loss_D = lambda2 * loss_D1 + lambda3 * loss_D2
@@ -85,8 +85,8 @@ class STGANModel(BaseModel):
     def backward2(self):
         self.loss_G1_GAN = self.GAN_loss(self.pred_fake, target_is_real = 1)
         self.loss_G2_GAN = self.GAN_loss(self.pred_fake2, target_is_real = 1)                                             
-        self.loss_G1_L1 = self.criterionL1(self.fake_shadow_image, self.shadow_mask)
-        self.loss_G2_L1 = self.criterionL1(self.fake_free_shadow_image, self.shadowfree_img)
+        self.loss_G1_L1 = self.criterionL1(self.fake_hand_mask, self.hand_mask)
+        self.loss_G2_L1 = self.criterionL1(self.fake_hand_img, self.hand_img)
         
         lambda1 = 5; lambda2 = 0.1; lambda3 = 0.1;
         loss_G1 = self.loss_G1_GAN + self.loss_G1_L1 * lambda2
@@ -99,8 +99,8 @@ class STGANModel(BaseModel):
         self.forward()
 
         RES = dict()
-        RES['final']= self.fake_free_shadow_image
-        RES['phase1'] = self.fake_shadow_image 
+        RES['final']= self.fake_hand_img
+        RES['phase1'] = self.fake_hand_mask 
         return  RES
     
     def optimize_parameters(self):
