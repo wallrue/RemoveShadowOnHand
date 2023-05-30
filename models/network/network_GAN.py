@@ -7,10 +7,9 @@ import torch
 import torch.nn as nn
 import functools
 from torch.nn import init
-from torch.optim import lr_scheduler
 from torch.autograd import Variable
 from .network_RESNET import resnext101_32x8d
-from .network_MobileNet import MobileNetV1, MobileNetV2, mobilenetv3_large, mobilenetv3_small
+from .network_MobileNet import MobileNetV1, InvertedBlockV2, MobileNetV2, mobilenetv3_large, mobilenetv3_small
 
 ###############################################################################
 # Definitions of GAN
@@ -26,24 +25,6 @@ def get_norm_layer(norm_type='instance'):
     else:
         raise NotImplementedError('normalization layer [%s] is not found' % norm_type)
     return norm_layer
-
-def get_scheduler(optimizer, opt):
-    if opt.lr_policy == 'lambda':
-        def lambda_rule(epoch):
-            lr_l = 1.0 - max(0, epoch + opt.epoch_count - opt.niter) / float(opt.niter_decay + 1)
-            return lr_l
-        scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda_rule)
-    elif opt.lr_policy == 'step':
-        scheduler = lr_scheduler.StepLR(optimizer, step_size=opt.lr_decay_iters, gamma=0.1)
-    elif opt.lr_policy == 'shadow_step':
-        scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=[70000,90000,13200], gamma=0.3)
-    elif opt.lr_policy == 'plateau':
-        scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.2, threshold=0.01, patience=5)
-    elif opt.lr_policy == 'cosine':
-        scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=opt.niter, eta_min=0)
-    else:
-        return NotImplementedError('learning rate policy [%s] is not implemented', opt.lr_policy)
-    return scheduler
 
 def init_weights(net, init_type='normal', gain=0.02):
     def init_func(m):
@@ -64,15 +45,14 @@ def init_weights(net, init_type='normal', gain=0.02):
         elif classname.find('BatchNorm2d') != -1:
             init.normal_(m.weight.data, 1.0, gain)
             init.constant_(m.bias.data, 0.0)
-
     print('initialize network with %s' % init_type)
     net.apply(init_func)
 
 def init_net(net, init_type='normal', init_gain=0.02, gpu_ids=[]):
-    if len(gpu_ids) > 0:
-        assert(torch.cuda.is_available())
-        net.to(gpu_ids[0])
-        net = torch.nn.DataParallel(net, gpu_ids)
+    # if len(gpu_ids) > 0:
+    #     assert(torch.cuda.is_available())
+    #     net.to(gpu_ids[0])
+    #     net = torch.nn.DataParallel(net, gpu_ids)
     init_weights(net, init_type, gain=init_gain)
     return net
 
@@ -94,51 +74,18 @@ def define_G(input_nc, output_nc, ngf, netG, norm='batch', use_dropout=False, in
         net = MobileUNet(input_nc, output_nc)
     elif netG == 'RESNEXT':
         net = resnext101_32x8d(pretrained=False, num_classes=output_nc, num_inputchannels=input_nc)
-        if len(gpu_ids)>0:
-            assert(torch.cuda.is_available())
-            net.to(gpu_ids[0])
-            net = torch.nn.DataParallel(net,gpu_ids)
-        return net
     elif netG == 'mobilenetV1':
-        if input_nc == 3:
-            net = MobileNetV1(ch_in=input_nc, n_classes=output_nc)
-            if len(gpu_ids)>0:
-                assert(torch.cuda.is_available())
-                net.to(gpu_ids[0])
-                net = torch.nn.DataParallel(net,gpu_ids)
-            return net
-        else:
-            raise NotImplementedError('MobileNet should have 3 input channels')
+        net = MobileNetV1(ch_in=input_nc, n_classes=output_nc)
+        print('MobileNetV1 should have 3 input channels')
     elif netG == 'mobilenetV2':
-        if input_nc == 3:        
-            net = MobileNetV2(ch_in=input_nc, n_classes=output_nc)
-            if len(gpu_ids)>0:
-                assert(torch.cuda.is_available())
-                net.to(gpu_ids[0])
-                net = torch.nn.DataParallel(net,gpu_ids)
-            return net
-        else:
-            raise NotImplementedError('MobileNet should have 3 input channels')
-    elif netG == 'mobilenetV3_large':
-        if input_nc == 3:        
-            net = mobilenetv3_large(num_classes=output_nc)
-            if len(gpu_ids)>0:
-                assert(torch.cuda.is_available())
-                net.to(gpu_ids[0])
-                net = torch.nn.DataParallel(net,gpu_ids)
-            return net
-        else:
-            raise NotImplementedError('MobileNet should have 3 input channels')
+        net = MobileNetV2(ch_in=input_nc, n_classes=output_nc)
+        print('MobileNetV2 should have 3 input channels')
+    elif netG == 'mobilenetV3_large':       
+        net = mobilenetv3_large(ch_in=input_nc, ch_out=output_nc)
+        print('MobileNetV3 should have 3 input channels')    
     elif netG == 'mobilenetV3_small':
-        if input_nc == 3:        
-            net = mobilenetv3_small(num_classes=output_nc)
-            if len(gpu_ids)>0:
-                assert(torch.cuda.is_available())
-                net.to(gpu_ids[0])
-                net = torch.nn.DataParallel(net,gpu_ids)
-            return net
-        else:
-            raise NotImplementedError('MobileNet should have 3 input channels')
+        net = mobilenetv3_small(ch_in=input_nc, ch_out=output_nc)
+        print('MobileNetV3 should have 3 input channels')      
     else:
         raise NotImplementedError('Generator model name [%s] is not recognized' % netG)
     return init_net(net, init_type, init_gain, gpu_ids)
@@ -470,61 +417,61 @@ class PixelDiscriminator(nn.Module):
 # Definitions of Mobile UNet
 ###############################################################################
 
-class InvertedResidualBlock(nn.Module):
-    """Inverted residual block used in MobileNetV2
-    """
-    def __init__(self, in_c, out_c, stride, expansion_factor=6, deconvolve=False):
-        super(InvertedResidualBlock, self).__init__()
-        # check stride value
-        assert stride in [1, 2]
-        self.stride = stride
-        self.in_c = in_c
-        self.out_c = out_c
-        # Skip connection if stride is 1
-        self.use_skip_connection = True if self.stride == 1 else False
+# class InvertedResidualBlock(nn.Module):
+#     """Inverted residual block used in MobileNetV2
+#     """
+#     def __init__(self, in_c, out_c, stride, expansion_factor=6, deconvolve=False):
+#         super(InvertedResidualBlock, self).__init__()
+#         # check stride value
+#         assert stride in [1, 2]
+#         self.stride = stride
+#         self.in_c = in_c
+#         self.out_c = out_c
+#         # Skip connection if stride is 1
+#         self.use_skip_connection = True if self.stride == 1 else False
 
-        # expansion factor or t as mentioned in the paper
-        ex_c = int(self.in_c * expansion_factor)
-        if deconvolve:
-            self.conv = nn.Sequential(
-                # pointwise convolution
-                nn.Conv2d(self.in_c, ex_c, 1, 1, 0, bias=False),
-                nn.BatchNorm2d(ex_c),
-                nn.ReLU6(inplace=True),
-                # depthwise convolution
-                nn.ConvTranspose2d(ex_c, ex_c, 4,self.stride,1, groups=ex_c, bias=False),
-                nn.BatchNorm2d(ex_c),
-                nn.ReLU6(inplace=True),
-                # pointwise convolution
-                nn.Conv2d(ex_c, self.out_c, 1, 1, 0, bias=False),
-                nn.BatchNorm2d(self.out_c),
-            )
-        else:
-            self.conv = nn.Sequential(
-                # pointwise convolution
-                nn.Conv2d(self.in_c, ex_c, 1, 1, 0, bias=False),
-                nn.BatchNorm2d(ex_c),
-                nn.ReLU6(inplace=True),
-                # depthwise convolution
-                nn.Conv2d(ex_c, ex_c, 3, self.stride, 1, groups=ex_c, bias=False),
-                nn.BatchNorm2d(ex_c),
-                nn.ReLU6(inplace=True),
-                # pointwise convolution
-                nn.Conv2d(ex_c, self.out_c, 1, 1, 0, bias=False),
-                nn.BatchNorm2d(self.out_c),
-            )
-        self.conv1x1 = nn.Conv2d(self.in_c, self.out_c, 1, 1, 0, bias=False)
+#         # expansion factor or t as mentioned in the paper
+#         ex_c = int(self.in_c * expansion_factor)
+#         if deconvolve:
+#             self.conv = nn.Sequential(
+#                 # pointwise convolution
+#                 nn.Conv2d(self.in_c, ex_c, 1, 1, 0, bias=False),
+#                 nn.BatchNorm2d(ex_c),
+#                 nn.ReLU6(inplace=True),
+#                 # depthwise convolution
+#                 nn.ConvTranspose2d(ex_c, ex_c, 4,self.stride,1, groups=ex_c, bias=False),
+#                 nn.BatchNorm2d(ex_c),
+#                 nn.ReLU6(inplace=True),
+#                 # pointwise convolution
+#                 nn.Conv2d(ex_c, self.out_c, 1, 1, 0, bias=False),
+#                 nn.BatchNorm2d(self.out_c),
+#             )
+#         else:
+#             self.conv = nn.Sequential(
+#                 # pointwise convolution
+#                 nn.Conv2d(self.in_c, ex_c, 1, 1, 0, bias=False),
+#                 nn.BatchNorm2d(ex_c),
+#                 nn.ReLU6(inplace=True),
+#                 # depthwise convolution
+#                 nn.Conv2d(ex_c, ex_c, 3, self.stride, 1, groups=ex_c, bias=False),
+#                 nn.BatchNorm2d(ex_c),
+#                 nn.ReLU6(inplace=True),
+#                 # pointwise convolution
+#                 nn.Conv2d(ex_c, self.out_c, 1, 1, 0, bias=False),
+#                 nn.BatchNorm2d(self.out_c),
+#             )
+#         self.conv1x1 = nn.Conv2d(self.in_c, self.out_c, 1, 1, 0, bias=False)
 
             
 
-    def forward(self, x):
-        if self.use_skip_connection:
-            out = self.conv(x)
-            if self.in_c != self.out_c:
-                x = self.conv1x1(x)
-            return x+out
-        else:
-            return self.conv(x)
+#     def forward(self, x):
+#         if self.use_skip_connection:
+#             out = self.conv(x)
+#             if self.in_c != self.out_c:
+#                 x = self.conv1x1(x)
+#             return x+out
+#         else:
+#             return self.conv(x)
 
 class MobileUNet(nn.Module):
     """Modified UNet with inverted residual block and depthwise seperable convolution
@@ -549,7 +496,8 @@ class MobileUNet(nn.Module):
         self.D_irb2 = self.irb_bottleneck(96, 32, 1, 2, 6, True)
         self.D_irb3 = self.irb_bottleneck(32, 24, 1, 2, 6, True)
         self.D_irb4 = self.irb_bottleneck(24, 16, 1, 2, 6, True)
-        self.DConv4x4 = nn.ConvTranspose2d(16,16,4,2,1,groups=16, bias=False)
+        self.DConv4x4 = nn.ConvTranspose2d(16, 16, 4, 2, 1, groups=16, bias=False)
+        
         # Final layer: output channel number can be changed as per the usecase
         self.conv1x1_decode = nn.Conv2d(16, output_nc, kernel_size=1, stride=1)
 
@@ -569,11 +517,11 @@ class MobileUNet(nn.Module):
         """Create a series of inverted residual blocks.
         """
         convs = []
-        xx = InvertedResidualBlock(in_c, out_c, s, t, deconvolve=d)
+        xx = InvertedBlockV2(in_c, out_c, t, s) #, deconvolve=d)
         convs.append(xx)
         if n>1:
             for i in range(1,n):
-                xx = InvertedResidualBlock(out_c, out_c, 1, t, deconvolve=d)
+                xx = InvertedBlockV2(out_c, out_c, t, 1) #, deconvolve=d)
                 convs.append(xx)
         conv = nn.Sequential(*convs)
         return conv

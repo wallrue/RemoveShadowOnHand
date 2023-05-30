@@ -147,12 +147,13 @@ class BaseOptions():
         #         if id >= 0:
         #             opt.gpu_ids.append(available_gpus[id])
  
+        # Change gpu_ids from string_type to list_type
         str_ids = opt.gpu_ids.split(',')
         opt.gpu_ids = []
-        for str_id in str_ids:
-            id = int(str_id)
+        for str_id in range(torch.cuda.device_count()): # opt.gpu_ids is empty if no device exists
+            id = int(str_ids[str_id])
             if id >= 0:
                 opt.gpu_ids.append(id)
-            
+                
         self.opt = opt
         return self.opt

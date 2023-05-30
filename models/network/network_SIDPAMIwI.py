@@ -6,26 +6,27 @@
 import torch
 from torch import nn
 from .network_GAN import define_G
+import torch.nn.functional as F
 
 class SIDPAMIwINet(nn.Module):
-    def __init__(self, opt):
+    def __init__(self, opt, net_g, net_m, net_i):
         """ SIDPAMIwINet includes G net, M net and I net, which is to relit and remove shadow 
         from available shadow mask and full shadow image
         """
         super(SIDPAMIwINet, self).__init__()
         #self.training = istrain    
-        self.netG = define_G(opt.input_nc+1, 6, opt.ngf, 'RESNEXT', opt.norm,
+        self.netG = define_G(opt.input_nc+1, 6, opt.ngf, net_g, opt.norm,
                                       not opt.no_dropout, opt.init_type, opt.init_gain, [])
-        self.netM = define_G(6+1, opt.output_nc, opt.ngf, 'unet_256', opt.norm,
+        self.netM = define_G(6+1, opt.output_nc, opt.ngf, net_m, opt.norm,
                                       not opt.no_dropout, opt.init_type, opt.init_gain, [])
-        self.netI = networks.define_G(6+1, 3, opt.ngf, 'unet_256', opt.norm,
+        self.netI = define_G(6+1, 3, opt.ngf, net_i, opt.norm,
                                       not opt.no_dropout, opt.init_type, opt.init_gain, [])
 
     def forward(self, input_img, fake_shadow_image):
         self.input_img = input_img
         self.fake_shadow_image = fake_shadow_image
         inputG = torch.cat([self.input_img, self.fake_shadow_image], 1)
-        
+        inputG = F.interpolate(inputG,size=(256,256))
         # Compute output of generator 2
         self.shadow_param_pred = self.netG(inputG)
         
@@ -35,8 +36,8 @@ class SIDPAMIwINet(nn.Module):
         
         # Compute lit image
         # self.shadow_param_pred = torch.mean(self.shadow_param_pred.view([n,m,-1]),dim=2)
-        add = self.shadow_param_pred[:,[0,2,4]]
-        mul = (self.shadow_param_pred[:,[1,3,5]]*2) +3
+        add = self.shadow_param_pred[:,[0,2,4]] /2 
+        mul = self.shadow_param_pred[:,[1,3,5]] + 2
         
         add = add.view(n,3,1,1).expand((n,3,w,h))
         mul = mul.view(n,3,1,1).expand((n,3,w,h))
@@ -56,11 +57,11 @@ class SIDPAMIwINet(nn.Module):
         self.residual = self.netI(inputI)
         self.final_I = self.final+self.residual
         
-        return self.shadow_param_pred, self.alpha_pred, self.final, final_I
+        return self.shadow_param_pred, self.alpha_pred, self.final, self.final_I
 
-def define_SIDPAMIwINet(opt):
+def define_SIDPAMIwINet(opt, net_g = 'RESNEXT', net_m = 'unet_256', net_i = 'unet_256'):
     net = None
-    net = SIDPAMIwINet(opt)
+    net = SIDPAMIwINet(opt, net_g, net_m, net_i)
     if len(opt.gpu_ids)>0:
         assert(torch.cuda.is_available())
         net.to(opt.gpu_ids[0])

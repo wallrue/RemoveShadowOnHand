@@ -21,8 +21,8 @@ class STGANModel(BaseModel):
         self.model_names = ['STGAN1', 'STGAN2']
         self.cuda_tensor = torch.FloatTensor if self.device == torch.device('cpu') else torch.cuda.FloatTensor
         
-        self.netSTGAN1 = network_STGAN.define_STGAN(opt, 3, 1)
-        self.netSTGAN2 = network_STGAN.define_STGAN(opt, 4, 3)
+        self.netSTGAN1 = network_STGAN.define_STGAN(opt, 3, 1, net_g = 'mobile_unet', net_d = 'n_layers')
+        self.netSTGAN2 = network_STGAN.define_STGAN(opt, 4, 3, net_g = 'mobile_unet', net_d = 'n_layers')
         
         self.netSTGAN1_module = self.netSTGAN1.module if len(opt.gpu_ids) > 0 else self.netSTGAN1
         self.netSTGAN2_module = self.netSTGAN2.module if len(opt.gpu_ids) > 0 else self.netSTGAN2
@@ -49,7 +49,7 @@ class STGANModel(BaseModel):
         self.shadowfree_img = input['shadowfree'].to(self.device)
         
         self.shadow_mask = (self.shadow_mask>0.9).type(torch.float)*2-1
-        self.nim = self.input_img.shape[1]
+        #self.nim = self.input_img.shape[1]
     
     def forward(self):
         # Compute output of generator 1

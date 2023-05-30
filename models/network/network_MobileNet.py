@@ -90,9 +90,9 @@ def conv3x3(ch_in, ch_out, stride):
         )
     )
 
-class InvertedBlock(nn.Module):
+class InvertedBlockV2(nn.Module):
     def __init__(self, ch_in, ch_out, expand_ratio, stride):
-        super(InvertedBlock, self).__init__()
+        super(InvertedBlockV2, self).__init__()
 
         self.stride = stride
         assert stride in [1,2]
@@ -141,7 +141,7 @@ class MobileNetV2(nn.Module):
         for t, c, n, s in self.configs:
             for i in range(n):
                 stride = s if i == 0 else 1
-                layers.append(InvertedBlock(ch_in=input_channel, ch_out=c, expand_ratio=t, stride=stride))
+                layers.append(InvertedBlockV2(ch_in=input_channel, ch_out=c, expand_ratio=t, stride=stride))
                 input_channel = c
 
         self.layers = nn.Sequential(*layers)
@@ -149,7 +149,7 @@ class MobileNetV2(nn.Module):
         self.last_conv = conv1x1(input_channel, 1280)
 
         self.classifier = nn.Sequential(
-            nn.Dropout2d(0.2),
+            nn.Dropout(0.2),
             nn.Linear(1280, n_classes)
         )
         self.avg_pool = nn.AdaptiveAvgPool2d(1)
@@ -241,10 +241,9 @@ def conv_1x1_bn(inp, oup):
         h_swish()
     )
 
-
-class InvertedResidual(nn.Module):
+class InvertedResidualV3(nn.Module):
     def __init__(self, inp, hidden_dim, oup, kernel_size, stride, use_se, use_hs):
-        super(InvertedResidual, self).__init__()
+        super(InvertedResidualV3, self).__init__()
         assert stride in [1, 2]
 
         self.identity = stride == 1 and inp == oup
@@ -284,27 +283,26 @@ class InvertedResidual(nn.Module):
         else:
             return self.conv(x)
 
-
 class MobileNetV3(nn.Module):
-    def __init__(self, cfgs, mode, num_classes=1000, width_mult=1.):
+    def __init__(self, ch_in, num_classes, cfgs, mode, width_mult=1.0):
         super(MobileNetV3, self).__init__()
         # setting of inverted residual blocks
         self.cfgs = cfgs
         assert mode in ['large', 'small']
 
         # building first layer
-        input_channel = _make_divisible(16 * width_mult, 8)
-        layers = [conv_3x3_bn(3, input_channel, 2)]
+        net_input_channel = _make_divisible(16 * width_mult, 8) #value of channel which is possible to view
+        layers = [conv_3x3_bn(ch_in, net_input_channel, 2)]
         # building inverted residual blocks
-        block = InvertedResidual
+        block = InvertedResidualV3
         for k, t, c, use_se, use_hs, s in self.cfgs:
             output_channel = _make_divisible(c * width_mult, 8)
-            exp_size = _make_divisible(input_channel * t, 8)
-            layers.append(block(input_channel, exp_size, output_channel, k, s, use_se, use_hs))
-            input_channel = output_channel
+            exp_size = _make_divisible(net_input_channel * t, 8)
+            layers.append(block(net_input_channel, exp_size, output_channel, k, s, use_se, use_hs))
+            net_input_channel = output_channel
         self.features = nn.Sequential(*layers)
         # building last several layers
-        self.conv = conv_1x1_bn(input_channel, exp_size)
+        self.conv = conv_1x1_bn(net_input_channel, exp_size)
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         output_channel = {'large': 1280, 'small': 1024}
         output_channel = _make_divisible(output_channel[mode] * width_mult, 8) if width_mult > 1.0 else output_channel[mode]
@@ -339,8 +337,7 @@ class MobileNetV3(nn.Module):
                 m.weight.data.normal_(0, 0.01)
                 m.bias.data.zero_()
 
-
-def mobilenetv3_large(**kwargs):
+def mobilenetv3_large(ch_in, ch_out):
     """
     Constructs a MobileNetV3-Large model
     """
@@ -362,10 +359,9 @@ def mobilenetv3_large(**kwargs):
         [5,   6, 160, 1, 1, 1],
         [5,   6, 160, 1, 1, 1]
     ]
-    return MobileNetV3(cfgs, mode='large', **kwargs)
+    return MobileNetV3(ch_in, ch_out, cfgs, mode='large')
 
-
-def mobilenetv3_small(**kwargs):
+def mobilenetv3_small(ch_in, ch_out):
     """
     Constructs a MobileNetV3-Small model
     """
@@ -384,4 +380,4 @@ def mobilenetv3_small(**kwargs):
         [5,    6,  96, 1, 1, 1],
     ]
 
-    return MobileNetV3(cfgs, mode='small', **kwargs)
+    return MobileNetV3(ch_in, ch_out, cfgs, mode='small')

@@ -18,6 +18,7 @@ from torch.autograd import Variable
 from options.train_options import TrainOptions
 from data import CustomDatasetDataLoader
 from models import create_model
+os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE" #Fix error on computer
 
 def progressbar(it, info_dict, size=60, out=sys.stdout):
     """The function for displaying progress bar 
@@ -35,7 +36,9 @@ def progressbar(it, info_dict, size=60, out=sys.stdout):
         
         taken_time = time.time() - info_dict["start time"]
         print("\r{} [{}{}] {}/{} | {:.3f} secs".format(info_dict["epoch"], "#"*x, "."*(size-x), n, count, taken_time), 
-                end='', file=out, flush=True)
+                end='', file=out, flush=True) # Flushing for progressing bar in Python 3.0 
+        sys.stdout.flush() # Flushing for progressing bar in Python 2.0 
+        
     show(0, 1)
     for i, item in enumerate(it):
         yield i, item
@@ -109,7 +112,7 @@ def train_loop(opt, dataset, model):
         model (string) -- model which is trained
     """
     cuda_tensor = torch.cuda.FloatTensor if len(opt.gpu_ids) > 0 else torch.FloatTensor
-    for epoch in range(opt.epoch_count,opt.niter + opt.niter_decay + 1):
+    for epoch in range(opt.epoch_count, opt.niter + opt.niter_decay + 1):
         epoch_start_time = time.time()
         epoch_iter = 0
         t_comp, t_data = 0, 0
@@ -135,27 +138,28 @@ def train_loop(opt, dataset, model):
                                  epoch_iter, train_losses, t_comp, t_data)
         
         # Validation section
-        valid_losses, n_valid_loss = 0, 0
         with torch.no_grad():
+            valid_losses, val_loss_phase1, n_valid_loss = 0, 0, 1
             dataset.working_subset = "valid"
-            for _, data in enumerate(dataset, 0):
+            assert len(dataset) > 0, "valid dataset is empty, please change opt.validDataset_split"
+            for valid_id, data in enumerate(dataset, 0):
                 full_shadow_img = Variable(data['shadowfull'].type(cuda_tensor))
                 shadow_mask = Variable(data['shadowmask'].type(cuda_tensor))
                 shadowfree_img = Variable(data['shadowfree'].type(cuda_tensor))
                 
                 #hand_mask = Variable(data['handmask'].type(cuda_tensor))
-                shadowfree_img = Variable(data['handimg'].type(cuda_tensor))
+                #shadowfree_img = Variable(data['handimg'].type(cuda_tensor))
 
-                output = model.get_prediction(full_shadow_img)        
-                #val_loss_G1_L1 = model.criterionL1(output['phase1'], shadow_mask) # Another loss (shadow detect, hand segment,...)
+                output = model.get_prediction(full_shadow_img)       
+                val_loss_phase1 += model.criterionL1(output['phase1'], shadow_mask) # Another loss (shadow detect, hand segment,...)
                 valid_losses += model.criterionL1(output['final'], shadowfree_img)
-                n_valid_loss += 1
-
-    
-        valid_losses = valid_losses/ n_valid_loss
-        total_losses = {"valid_reconstruction": valid_losses, **train_losses} #merging 2 dicts
-        print_current_losses(os.path.join(opt.checkpoints_dir, opt.name, 'valid.log'), epoch, current_lr, \
-                             0, total_losses, -1.0, -1.0)
+                n_valid_loss += valid_id
+                    
+            total_losses = {"valid_reconstruction": valid_losses/ n_valid_loss, 
+                            "valid_phase1": val_loss_phase1/ n_valid_loss, **train_losses} #merging 2 dicts
+            print_current_losses(os.path.join(opt.checkpoints_dir, opt.name, 'valid.log'), epoch, current_lr, \
+                                 0, total_losses, -1.0, -1.0)
+            
         # Saving model
         if epoch % opt.save_epoch_freq == 0:
             model.save_networks('latest')
@@ -170,17 +174,19 @@ if __name__=='__main__':
     Example of modelname: STGAN, DSDSID, SIDSTGAN, SIDPAMISTGAN
     """
     train_options = TrainOptions()
-    dataset_dir = {"shadowparam": "C:/Users/m1101/Downloads/Shadow_Removal/SID/_Git_SID/data_processing/dataset/NTUST_HS/",
-                   "shadowsynthetic": "C:/Users/m1101/Downloads/Shadow_Removal/SID/_Git_SID/data_processing/dataset/SYNTHETIC_HAND/"}
-    checkpoints_dir = {"shadowparam": "C:/Users/m1101/Downloads/Shadow_Removal/SID/_Git_SID/checkpoints/",
-                       "shadowsynthetic": "C:/Users/m1101/Downloads/Shadow_Removal/SID/_Git_SID/checkpoints/"}
-    training_dict = [#["shadowparam", "STGAN"], 
-                     #["shadowparam", "SIDSTGAN"], 
+    dataset_dir = {"shadowparam": "C:/Users/lemin/Downloads/SYNTHETIC_HAND/",
+                   "shadowsynthetic": "C:/Users/lemin/Downloads/SYNTHETIC_HAND/"}
+    checkpoints_dir = {"shadowparam": "C:/Users/lemin/Downloads/checkpoints/",
+                       "shadowsynthetic": "C:/Users/lemin/Downloads/checkpoints/"}
+    training_dict = [#["shadowsynthetic", "DSDSID"], 
+                     ["shadowsynthetic", "MedSegDiff"], 
                      #["shadowparam", "SIDPAMISTGAN"], 
-                     #["shadowsynthetic", "STGAN"], 
+                     #["shadowparam", "SIDPAMIwISTGAN"]
+                     #["shadowparam", "STGAN"], 
                      #["shadowsynthetic", "SIDSTGAN"], 
                      #["shadowsynthetic", "SIDPAMISTGAN"], 
-                     ["shadowsynthetic", "STGANwHand"]]
+                     #["shadowsynthetic", "STGANwHand"]
+                     ]
     
     for dataset_name, model_name in training_dict:
         print('============== Start training: dataset {}, model {} =============='.format(model_name, dataset_name))

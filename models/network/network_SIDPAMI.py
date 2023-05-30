@@ -7,25 +7,26 @@
 import torch
 from torch import nn
 from .network_GAN import define_G, define_D
+import torch.nn.functional as F
 
 class SIDPAMINet(nn.Module):
-    def __init__(self, opt):
+    def __init__(self, opt, net_g, net_m, net_d):
         """ SIDPAMINet is a SID with discriminator D
         """
         super(SIDPAMINet, self).__init__()
         #self.training = istrain   
-        self.netG = define_G(opt.input_nc+1, 6, opt.ngf, 'RESNEXT', opt.norm,
+        self.netG = define_G(opt.input_nc+1, 6, opt.ngf, net_g, opt.norm,
                                       not opt.no_dropout, opt.init_type, opt.init_gain, [])
-        self.netM = define_G(6+1, opt.output_nc, opt.ngf, 'unet_256', opt.norm,
+        self.netM = define_G(6+1, opt.output_nc, opt.ngf, net_m, opt.norm,
                                       not opt.no_dropout, opt.init_type, opt.init_gain, [])
-        self.netD = define_D(opt.input_nc + opt.output_nc, opt.ngf, 'n_layers', 3, opt.norm, 
+        self.netD = define_D(opt.input_nc + opt.output_nc, opt.ngf, net_d, 3, opt.norm, 
                                          True, opt.init_type, opt.init_gain, [])
 
     def forward_G(self, input_img, fake_shadow_image):
         self.input_img = input_img
         self.fake_shadow_image = fake_shadow_image
         inputG = torch.cat([self.input_img, self.fake_shadow_image], 1)
-        
+        inputG = F.interpolate(inputG,size=(256,256))
         # Compute output of generator 2
         self.shadow_param_pred = self.netG(inputG)
         
@@ -58,9 +59,9 @@ class SIDPAMINet(nn.Module):
         pred_real = self.netD(real_package)
         return pred_fake, pred_real
 
-def define_SIDPAMI(opt):
+def define_SIDPAMI(opt, net_g = 'RESNEXT', net_m = 'unet_256', net_d = 'n_layers'):
     net = None
-    net = SIDPAMINet(opt)
+    net = SIDPAMINet(opt, net_g, net_m, net_d)
     if len(opt.gpu_ids)>0:
         assert(torch.cuda.is_available())
         net.to(opt.gpu_ids[0])

@@ -18,7 +18,7 @@ from options.test_options import TestOptions
 from data import CustomDatasetDataLoader
 from models import create_model
 from models.loss_function import calculate_ssim, calculate_psnr
-
+  
 def progressbar(it, info_dict, size=60, out=sys.stdout):
     """The function for displaying progress bar 
     
@@ -30,16 +30,19 @@ def progressbar(it, info_dict, size=60, out=sys.stdout):
     """
     count = len(it)
     def show(j, batch_size):
-        n = batch_size*j
-        x = int(size*n/count)
+        n = batch_size*j if batch_size*j < count else count
+        x = int(size*n/count) 
         
         taken_time = time.time() - info_dict["start time"]
         print("\r[{}{}] {}/{} | {:.3f} secs".format("#"*x, "."*(size-x), n, count, taken_time), 
-                end='', file=out, flush=True)
+                end='', file=out, flush=True) # Flushing for progressing bar in Python 3.0 
+        sys.stdout.flush() # Flushing for progressing bar in Python 2.0 
+        
     show(0, 1)
     for i, item in enumerate(it):
         yield i, item
-        batch_size = len(list(item.values())[0])
+        if i == 0: # Initialize batch_size value
+            batch_size = len(list(item.values())[0])
         show(i+1, batch_size)
     print("", flush=True, file=out) # Do thing after ending iteration
       
@@ -74,7 +77,8 @@ def evaluate(dataset, test_model, result_dir, folder_name):
     SSIM_dict = {"original": 0.0, "shadowmask": 0.0, "shadowfree": 0.0}
     
     path_list = [result_dir + "//original", 
-                 result_dir + "//groudtruth", 
+                 result_dir + "//groudtruth",
+                 result_dir + "//shadowmask",  
                  result_dir + f"//{folder_name}"]
     if not os.path.exists(result_dir):
         os.mkdir(result_dir)
@@ -102,7 +106,7 @@ def evaluate(dataset, test_model, result_dir, folder_name):
         fake_shadowmask = prediction['phase1']
         
         for i in range(len(real_shadowfull)):
-            img_hand = (fake_shadowmask[i]>0.5)*real_shadowfull[i] #!
+            # img_hand = (fake_shadowmask[i]>0.5)*real_shadowfull[i] #!
             img_shadowfull = real_shadowfull[i].permute(1, 2, 0)
             img_shadowmask = real_shadowmask[i][0] #.permute(1, 2, 0)
             img_shadowfree = real_shadowfree[i].permute(1, 2, 0)
@@ -120,20 +124,25 @@ def evaluate(dataset, test_model, result_dir, folder_name):
             result_list = list()
             result_list.append(((img_shadowfull + 1.0)*255.0/2.0).cpu().numpy().astype(np.uint8))
             result_list.append(((img_shadowfree + 1.0)*255.0/2.0).cpu().numpy().astype(np.uint8))
+            result_list.append(((pre_shadowmask + 1.0)*255.0/2.0).cpu().numpy().astype(np.uint8))
             result_list.append(((pre_shadowfree + 1.0)*255.0/2.0).cpu().numpy().astype(np.uint8))
             
             # Save output image after processing
             for idx, path in enumerate(path_list):
                 data_name = path + f"\\{list_imgname[i]}"
                 if not os.path.isfile(data_name):
-                    Image.fromarray(result_list[idx]).convert('RGB').resize((224, 224)).save(data_name)
+                    result_img = result_list[idx]
+                    if len(np.shape(result_img)) == 3 and np.shape(result_img)[2] == 3:
+                        Image.fromarray(result_img).convert('RGB').resize((224, 224)).save(data_name)
+                    elif len(np.shape(result_img)) == 2:
+                        Image.fromarray(result_img).resize((224, 224)).save(data_name)
                  
-            my_img = ((img_hand.permute(1, 2, 0) + 1.0)*255.0/2.0).cpu().numpy().astype(np.uint8)
-            my_img1 = ((pre_shadowmask + 1.0)*255.0/2.0).cpu().numpy().astype(np.uint8)
-            pixel_value = [np.mean(my_img[:,:,0]), np.mean(my_img[:,:,1]), np.mean(my_img[:,:,2])]
-            txt_string = str(int(pixel_value[0])) + "_" + str(int(pixel_value[1])) + "_" + str(int(pixel_value[2])) + "_" + str(int(pixel_value[1]  + pixel_value[2] + pixel_value[0]))
-            Image.fromarray(my_img).resize((224, 224)).save(result_dir + "//handmask_test" + f"\\{list_imgname[i][:-4]}" + "_" + txt_string + ".png")   
-            Image.fromarray(my_img1).resize((224, 224)).save(result_dir + "//mask_test" + f"\\{list_imgname[i]}")   
+            #my_img1 = ((img_hand.permute(1, 2, 0) + 1.0)*255.0/2.0).cpu().numpy().astype(np.uint8)
+            #my_img = ((pre_shadowmask + 1.0)*255.0/2.0).cpu().numpy().astype(np.uint8)
+            #pixel_value = [np.mean(my_img[:,:,0]), np.mean(my_img[:,:,1]), np.mean(my_img[:,:,2])]
+            #txt_string = str(int(pixel_value[0])) + "_" + str(int(pixel_value[1])) + "_" + str(int(pixel_value[2])) + "_" + str(int(pixel_value[1]  + pixel_value[2] + pixel_value[0]))
+            #Image.fromarray(my_img1).resize((224, 224)).save(result_dir + "//handmask_test" + f"\\{list_imgname[i][:-4]}" + "_" + txt_string + ".png")   
+            #Image.fromarray(my_img).resize((224, 224)).save(result_dir + "//mask_test" + f"\\{list_imgname[i]}")   
     
     length = len(dataset)
     PNSR_dict = {k: v / length for k, v in PNSR_dict.items()}
@@ -149,17 +158,17 @@ if __name__=='__main__':
     Example of modelname: DSDSID, SIDSTGAN, STGAN
     """
     test_options = TestOptions()
-    dataset_dir = {"shadowparam": "C:/Users/m1101/Downloads/Shadow_Removal/SID/_Git_SID/data_processing/dataset/NTUST_HS/",
-                   "shadowsynthetic": "C:/Users/m1101/Downloads/Shadow_Removal/SID/_Git_SID/data_processing/dataset/NTUST_HS_Test/"}
-    checkpoints_dir = {"shadowparam": "C:/Users/m1101/Downloads/Shadow_Removal/SID/_Git_SID/checkpoints/",
-                       "shadowsynthetic": "C:/Users/m1101/Downloads/Shadow_Removal/SID/_Git_SID/checkpoints/"}
+    dataset_dir = {"shadowparam": "C:/Users/lemin/Downloads/SYNTHETIC_HAND/",
+                   "shadowsynthetic": "C:/Users/lemin/Downloads/SYNTHETIC_HAND/"}
+    checkpoints_dir = {"shadowparam": "C:/Users/lemin/Downloads/checkpoints/",
+                       "shadowsynthetic": "C:/Users/lemin/Downloads/checkpoints/"}
     testing_dict = [#["shadowparam", "STGAN"],
-                    # ["shadowparam", "SIDSTGAN"],
+                    ["shadowparam", "SIDSTGAN"],
                     # ["shadowparam", "SIDPAMISTGAN"], 
                     # ["shadowsynthetic", "STGAN"], 
-                    # ["shadowsynthetic", "SIDSTGAN"], 
-                    ["shadowsynthetic", "STGANwHand"],
-                    ["shadowsynthetic", "STGANwHand"]]
+                    # ["shadowsynthetic", "SIDSTGAN"],
+                    # ["shadowsynthetic", "STGANwHand"]
+                    ]
     result_dir = os.getcwd() + "\\result_set\\"
     
     for dataset_name, model_name in testing_dict:    
@@ -170,8 +179,11 @@ if __name__=='__main__':
         test_options.model_name = model_name
         opt = test_options.parse()
         
+        # Dataset loading       
         data_loader = CustomDatasetDataLoader(opt)
         dataset = data_loader.load_data()
+        
+        # Model defination        
         model = create_model(opt)
         model.setup(opt)
         

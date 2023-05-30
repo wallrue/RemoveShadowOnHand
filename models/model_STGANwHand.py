@@ -22,7 +22,7 @@ class STGANwHandModel(BaseModel):
         self.cuda_tensor = torch.FloatTensor if self.device == torch.device('cpu') else torch.cuda.FloatTensor
         
         self.netSTGAN1 = network_STGAN.define_STGAN(opt, 3, 1)
-        self.netSTGAN2 = network_STGAN.define_STGAN(opt, 3, 3)
+        self.netSTGAN2 = network_STGAN.define_STGAN(opt, 4, 3)
         
         self.netSTGAN1_module = self.netSTGAN1.module if len(opt.gpu_ids) > 0 else self.netSTGAN1
         self.netSTGAN2_module = self.netSTGAN2.module if len(opt.gpu_ids) > 0 else self.netSTGAN2
@@ -45,11 +45,12 @@ class STGANwHandModel(BaseModel):
    
     def set_input(self, input):
         self.input_img = input['shadowfull'].to(self.device)
-        self.hand_mask = input['handmask'].to(self.device)
-        self.hand_img = input['handimg'].to(self.device)
+        self.hand_mask = (input['handmask'].to(self.device) > 0).type(torch.float)*2-1
         
-        self.hand_mask = (self.hand_mask>0.9).type(torch.float) #*2-1
-        self.nim = self.input_img.shape[1]
+        self.hand_img = input['handimg'].to(self.device) #Range [-1, 1]
+        self.hand_img = input['shadowfull'].to(self.device) * (self.hand_mask < 0) + self.hand_img
+        
+        #self.nim = self.input_img.shape[1]
     
     def forward(self):
         # Compute output of generator 1
@@ -57,7 +58,8 @@ class STGANwHandModel(BaseModel):
         self.fake_hand_mask = self.netSTGAN1_module.forward_G(inputSTGAN1)
         
         # Compute output of generator 2
-        inputSTGAN2 = (self.fake_hand_mask>0)*self.input_img #extract hand part
+        self.fake_hand_mask = (self.fake_hand_mask > 0).type(torch.float)*2-1
+        inputSTGAN2 = torch.cat((self.input_img, self.fake_hand_mask), 1)
         self.fake_hand_img = self.netSTGAN2_module.forward_G(inputSTGAN2)
 
     def forward_D(self):
@@ -66,8 +68,8 @@ class STGANwHandModel(BaseModel):
         real_AB = torch.cat((self.input_img, self.hand_mask), 1)                                                            
         self.pred_fake, self.pred_real = self.netSTGAN1_module.forward_D(fake_AB.detach(), real_AB)
                                                             
-        fake_ABC = torch.cat((self.input_img, self.fake_hand_img), 1)
-        real_ABC = torch.cat((self.input_img, self.hand_img), 1)                                                   
+        fake_ABC = torch.cat((self.input_img, self.fake_hand_mask, self.fake_hand_img), 1)
+        real_ABC = torch.cat((self.input_img, self.hand_mask, self.hand_img), 1)                                                   
         self.pred_fake2, self.pred_real2 = self.netSTGAN2_module.forward_D(fake_ABC.detach(), real_ABC)
                                                             
     def backward1(self):
@@ -88,7 +90,7 @@ class STGANwHandModel(BaseModel):
         self.loss_G1_L1 = self.criterionL1(self.fake_hand_mask, self.hand_mask)
         self.loss_G2_L1 = self.criterionL1(self.fake_hand_img, self.hand_img)
         
-        lambda1 = 5; lambda2 = 0.1; lambda3 = 0.1;
+        lambda1 = 2; lambda2 = 0.1; lambda3 = 0.1;
         loss_G1 = self.loss_G1_GAN + self.loss_G1_L1 * lambda2
         loss_G2 = self.loss_G2_GAN * lambda3 + self.loss_G2_L1 * lambda1  
         self.loss_G = loss_G1 + loss_G2
@@ -99,7 +101,7 @@ class STGANwHandModel(BaseModel):
         self.forward()
 
         RES = dict()
-        RES['final']= self.fake_hand_img
+        RES['final'] = self.fake_hand_img
         RES['phase1'] = self.fake_hand_mask 
         return  RES
     

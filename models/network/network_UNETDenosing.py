@@ -8,32 +8,6 @@
 import torch
 import torch.nn as nn
 import math
-
-def linear_scheduler(timesteps, start=0.0001, end=0.02):
-    """Returns linear schedule for beta
-    """
-    return torch.linspace(start, end, timesteps)
-
-def get_index_from_list(vals, t, x_shape):
-    """ Returns values from vals for corresponding timesteps
-    while considering the batch dimension.
-    
-    """
-    batch_size = t.shape[0]
-    output = vals.gather(-1, t.cpu())
-    return output.reshape(batch_size, *((1,) * (len(x_shape) - 1))).to(t.device)
-
-def forward_diffusion_sample(x_0, t, device="cpu"):
-    """Takes an image and a timestep as input and 
-    returns the noisy version of it after adding noise t times.
-    """
-    noise = torch.randn_like(x_0)
-    sqrt_alphas_cumprod_t = get_index_from_list(sqrt_alphas_cumprod, t, x_0.shape)
-    sqrt_one_minus_alphas_cumprod_t = get_index_from_list(sqrt_one_minus_alphas_cumprod, t, x_0.shape)
-    
-    # mean + variance
-    return sqrt_alphas_cumprod_t.to(device) * x_0.to(device) + sqrt_one_minus_alphas_cumprod_t.to(device) * noise.to(device), noise.to(device)
-
     
 class ConvBlock(nn.Module):
     def __init__(self, in_ch, out_ch, time_emb_dim, up=False):
@@ -53,8 +27,6 @@ class ConvBlock(nn.Module):
         self.relu  = nn.ReLU()
         
     def forward(self, x, t, ):
-        
-        
         h = self.bn1(self.relu(self.conv1(x)))
         # Time embedding
         time_emb = self.relu(self.time_mlp(t))
@@ -88,12 +60,12 @@ class UnetDenosing(nn.Module):
     original U-Net (residual blocks, multi-head attention) 
     and also adds time-step embeddings t
     """
-    def __init__(self):
+    def __init__(self, input_nc=3, output_nc=3):
         super().__init__()
-        image_channels = 3
+        image_channels = input_nc
+        out_dim = output_nc
         down_channels = (64, 128, 256, 512, 1024)
         up_channels = (1024, 512, 256, 128, 64)
-        out_dim = 1 
         time_emb_dim = 32
 
         # Time embedding
@@ -102,7 +74,6 @@ class UnetDenosing(nn.Module):
                 nn.Linear(time_emb_dim, time_emb_dim),
                 nn.ReLU()
             )
-        
         
         self.conv0 = nn.Conv2d(image_channels, down_channels[0], 3, padding=1)
 

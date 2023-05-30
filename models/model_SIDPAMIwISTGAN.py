@@ -26,14 +26,13 @@ class SIDPAMIwISTGANModel(BaseModel):
         self.isTrain = opt.isTrain
         self.loss_names = ['G1_GAN', 'G1_L1', 'D1_real', 'D1_fake', 
                            'G2_param', 'G2_L1', 'G2_L1_I']
-        self.model_names = {'G1', 'G2'}
+        self.model_names = ['G1', 'G2']
         
-
-        self.netG1 = network_STGAN.define_STGAN(opt, 3, 1)
-        self.netG2 = define_SIDPAMIwINet(opt)
+        self.netG1 = network_STGAN.define_STGAN(opt, 3, 1, net_g = 'unet_32', net_d = 'n_layers')
+        self.netG2 = define_SIDPAMIwINet(opt, net_g = 'mobilenetV2', net_m = 'unet_256', net_i = 'unet_256')
             
-        self.netG1.to(self.device)
-        self.netG2.to(self.device)
+        #self.netG1.to(self.device)
+        #self.netG2.to(self.device)
         
         self.netG1_module = self.netG1.module if len(opt.gpu_ids) > 0 else self.netG1
         
@@ -57,17 +56,17 @@ class SIDPAMIwISTGANModel(BaseModel):
         self.shadow_mask = input['shadowmask'].to(self.device)
         self.shadow_param = input['shadowparams'].to(self.device).type(torch.float)
         self.shadowfree_img = input['shadowfree'].to(self.device)
-        
-        self.shadow_mask = (self.shadow_mask>0.9).type(torch.float)*2-1
+
+        self.shadow_mask = (self.shadow_mask>0).type(torch.float)*2-1
         self.nim = self.input_img.shape[1]
     
     def forward(self):
         # Compute output of generator 1
         inputSTGAN1 = self.input_img
         self.fake_shadow_image = self.netG1_module.forward_G(inputSTGAN1)
-        
+
         # Compute output of generator 2
-        self.fake_shadow_image = (self.fake_shadow_image>0.9).type(torch.float)*2-1
+        self.fake_shadow_image = (self.fake_shadow_image>0).type(torch.float)*2-1
         self.shadow_param_pred, self.alpha_pred, self.fake_free_shadow_image, self.fake_free_shadow_image_I = self.netG2(self.input_img, self.fake_shadow_image)
                 
     def forward_D(self):
@@ -79,24 +78,24 @@ class SIDPAMIwISTGANModel(BaseModel):
         self.loss_D1_fake = self.GAN_loss(self.pred_fake, target_is_real = 0) 
         self.loss_D1_real = self.GAN_loss(self.pred_real, target_is_real = 1)
         
-        lambda_ = 0.1;
+        lambda_ = 0.5;
         loss_D1 = self.loss_D1_fake + self.loss_D1_real
         self.loss_D = lambda_ * loss_D1
         self.loss_D.backward()
 
     def backward2(self):
         # Calculate gradients for G1----------------------
-        lambda1, lambda2  = 5, 20
+        lambda1, lambda2  = 2, 5
         self.loss_G1_GAN = self.GAN_loss(self.pred_fake, target_is_real = 1)                                           
         self.loss_G1_L1 = self.criterionL1(self.fake_shadow_image, self.shadow_mask)
         self.loss_G1 = self.loss_G1_GAN*lambda1 + self.loss_G1_L1*lambda2
         
         # Calculate gradients for G2----------------------
-        lambda_ = 100
+        lambda_ = 5
         self.shadow_param[:,[1,3,5]] = (self.shadow_param[:,[1,3,5]])/2 - 1.5
         self.loss_G2_param = self.criterionL1(self.shadow_param_pred, self.shadow_param) * lambda_ 
-        self.loss_G2_L1 = self.criterionL1 (self.fake_free_shadow_image, self.shadowfree_img) * lambda_
-        self.loss_G2_L1_I = criterion(self.fake_free_shadow_image_I,self.shadowfree_img) * lambda_
+        self.loss_G2_L1 = self.criterionL1(self.fake_free_shadow_image, self.shadowfree_img) * lambda_
+        self.loss_G2_L1_I = self.criterionL1(self.fake_free_shadow_image_I,self.shadowfree_img) * lambda_
         self.loss_G2 = self.loss_G2_param + self.loss_G2_L1 + self.loss_G2_L1_I
         
         self.loss_G =  self.loss_G1 + self.loss_G2
