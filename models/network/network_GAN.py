@@ -9,7 +9,7 @@ import functools
 from torch.nn import init
 from torch.autograd import Variable
 from .network_RESNET import resnext101_32x8d
-from .network_MobileNet import MobileNetV1, InvertedBlockV2, MobileNetV2, mobilenetv3_large, mobilenetv3_small
+from .network_MobileNet import MobileNetV1, MobileNetV2, mobilenetv3_large, mobilenetv3_small
 
 ###############################################################################
 # Definitions of GAN
@@ -417,61 +417,61 @@ class PixelDiscriminator(nn.Module):
 # Definitions of Mobile UNet
 ###############################################################################
 
-# class InvertedResidualBlock(nn.Module):
-#     """Inverted residual block used in MobileNetV2
-#     """
-#     def __init__(self, in_c, out_c, stride, expansion_factor=6, deconvolve=False):
-#         super(InvertedResidualBlock, self).__init__()
-#         # check stride value
-#         assert stride in [1, 2]
-#         self.stride = stride
-#         self.in_c = in_c
-#         self.out_c = out_c
-#         # Skip connection if stride is 1
-#         self.use_skip_connection = True if self.stride == 1 else False
+class InvertedResidualBlock(nn.Module):
+    """Inverted residual block used in MobileNetV2
+    """
+    def __init__(self, in_c, out_c, stride, expansion_factor=6, deconvolve=False):
+        super(InvertedResidualBlock, self).__init__()
+        # check stride value
+        assert stride in [1, 2]
+        self.stride = stride
+        self.in_c = in_c
+        self.out_c = out_c
+        # Skip connection if stride is 1
+        self.use_skip_connection = True if self.stride == 1 else False
 
-#         # expansion factor or t as mentioned in the paper
-#         ex_c = int(self.in_c * expansion_factor)
-#         if deconvolve:
-#             self.conv = nn.Sequential(
-#                 # pointwise convolution
-#                 nn.Conv2d(self.in_c, ex_c, 1, 1, 0, bias=False),
-#                 nn.BatchNorm2d(ex_c),
-#                 nn.ReLU6(inplace=True),
-#                 # depthwise convolution
-#                 nn.ConvTranspose2d(ex_c, ex_c, 4,self.stride,1, groups=ex_c, bias=False),
-#                 nn.BatchNorm2d(ex_c),
-#                 nn.ReLU6(inplace=True),
-#                 # pointwise convolution
-#                 nn.Conv2d(ex_c, self.out_c, 1, 1, 0, bias=False),
-#                 nn.BatchNorm2d(self.out_c),
-#             )
-#         else:
-#             self.conv = nn.Sequential(
-#                 # pointwise convolution
-#                 nn.Conv2d(self.in_c, ex_c, 1, 1, 0, bias=False),
-#                 nn.BatchNorm2d(ex_c),
-#                 nn.ReLU6(inplace=True),
-#                 # depthwise convolution
-#                 nn.Conv2d(ex_c, ex_c, 3, self.stride, 1, groups=ex_c, bias=False),
-#                 nn.BatchNorm2d(ex_c),
-#                 nn.ReLU6(inplace=True),
-#                 # pointwise convolution
-#                 nn.Conv2d(ex_c, self.out_c, 1, 1, 0, bias=False),
-#                 nn.BatchNorm2d(self.out_c),
-#             )
-#         self.conv1x1 = nn.Conv2d(self.in_c, self.out_c, 1, 1, 0, bias=False)
+        # expansion factor or t as mentioned in the paper
+        ex_c = int(self.in_c * expansion_factor)
+        if deconvolve:
+            self.conv = nn.Sequential(
+                # pointwise convolution
+                nn.Conv2d(self.in_c, ex_c, 1, 1, 0, bias=False),
+                nn.BatchNorm2d(ex_c),
+                nn.ReLU6(inplace=True),
+                # depthwise convolution
+                nn.ConvTranspose2d(ex_c, ex_c, 4,self.stride,1, groups=ex_c, bias=False),
+                nn.BatchNorm2d(ex_c),
+                nn.ReLU6(inplace=True),
+                # pointwise convolution
+                nn.Conv2d(ex_c, self.out_c, 1, 1, 0, bias=False),
+                nn.BatchNorm2d(self.out_c),
+            )
+        else:
+            self.conv = nn.Sequential(
+                # pointwise convolution
+                nn.Conv2d(self.in_c, ex_c, 1, 1, 0, bias=False),
+                nn.BatchNorm2d(ex_c),
+                nn.ReLU6(inplace=True),
+                # depthwise convolution
+                nn.Conv2d(ex_c, ex_c, 3, self.stride, 1, groups=ex_c, bias=False),
+                nn.BatchNorm2d(ex_c),
+                nn.ReLU6(inplace=True),
+                # pointwise convolution
+                nn.Conv2d(ex_c, self.out_c, 1, 1, 0, bias=False),
+                nn.BatchNorm2d(self.out_c),
+            )
+        self.conv1x1 = nn.Conv2d(self.in_c, self.out_c, 1, 1, 0, bias=False)
 
             
 
-#     def forward(self, x):
-#         if self.use_skip_connection:
-#             out = self.conv(x)
-#             if self.in_c != self.out_c:
-#                 x = self.conv1x1(x)
-#             return x+out
-#         else:
-#             return self.conv(x)
+    def forward(self, x):
+        if self.use_skip_connection:
+            out = self.conv(x)
+            if self.in_c != self.out_c:
+                x = self.conv1x1(x)
+            return x+out
+        else:
+            return self.conv(x)
 
 class MobileUNet(nn.Module):
     """Modified UNet with inverted residual block and depthwise seperable convolution
@@ -517,11 +517,11 @@ class MobileUNet(nn.Module):
         """Create a series of inverted residual blocks.
         """
         convs = []
-        xx = InvertedBlockV2(in_c, out_c, t, s) #, deconvolve=d)
+        xx = InvertedResidualBlock(in_c, out_c, s, t, deconvolve=d)
         convs.append(xx)
         if n>1:
             for i in range(1,n):
-                xx = InvertedBlockV2(out_c, out_c, t, 1) #, deconvolve=d)
+                xx = InvertedResidualBlock(out_c, out_c, 1, t, deconvolve=d)
                 convs.append(xx)
         conv = nn.Sequential(*convs)
         return conv
@@ -543,7 +543,7 @@ class MobileUNet(nn.Module):
         x7 = self.irb_bottleneck6(x6) #(160,7,7)
         x8 = self.irb_bottleneck7(x7) #(320,7,7)
         x9 = self.conv1x1_encode(x8) #(1280,7,7) s5
-        print(x6.shape, x7.shape, x9.shape, self.D_irb1(x9).shape)
+        print(x6.shape, x8.shape, x9.shape, self.D_irb1(x9).shape)
         # Right arm / Decoding arm with skip connections
         d1 = self.D_irb1(x9) + x6
         d2 = self.D_irb2(d1) + x4

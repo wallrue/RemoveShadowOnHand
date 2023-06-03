@@ -16,6 +16,7 @@ class MedSegDiffModel(BaseModel):
     def modify_commandline_options(parser, is_train=True):
         parser.set_defaults(norm='batch')
         parser.set_defaults(input_nc=3, output_nc=3)
+        #128 size of images for 8GB RAM
         return parser
     
     def initialize(self, opt):
@@ -47,33 +48,42 @@ class MedSegDiffModel(BaseModel):
     def set_input(self, input):
         self.input_img = input['shadowfull'].to(self.device)
         self.shadow_mask = (input['shadowmask'].to(self.device) > 0).type(torch.float)*2-1
+        self.shadow_param = input['shadowparams'].to(self.device).type(torch.float)
         self.shadowfree_img = input['shadowfree'].to(self.device)
         
     def forward(self):
-        inputG1 = self.input_img
-        self.fake_shadowmask = self.netG1_module.forward(inputG1, self.shadow_mask) 
+        self.fake_shadowmask, self.shadow_mask = self.netG1_module.forward(self.input_img, self.shadow_mask) 
         #self.fake_shadowmask = self.shadow_mask
-        # Compute output of generator 2
+        self.fake_shadowmask = (self.fake_shadowmask>0).type(torch.float)*2-1
+        #self.shadow_param_pred, self.alpha_pred, self.fake_free_shadow_image = self.netG2(self.input_img, self.fake_shadowmask)
         inputG2 = torch.cat((self.input_img, self.fake_shadowmask), 1)
-        self.fake_image = self.netG2_module.forward(inputG2, self.shadowfree_img)   
-        
+        self.fake_free_shadow_image, self.shadowfree_img = self.netG2_module.forward(inputG2, self.shadowfree_img)
+
     def backward(self):
         self.loss_G1_L1 = self.MSELoss(self.fake_shadowmask, self.shadow_mask)
-        self.loss_G2_L1 = self.MSELoss(self.fake_image, self.shadowfree_img)
+        self.loss_G2_L1 = self.MSELoss(self.fake_free_shadow_image, self.shadowfree_img)
+        
+        # Calculate gradients for G2----------------------
+        # lambda_ = 1
+        # self.shadow_param[:,[1,3,5]] = (self.shadow_param[:,[1,3,5]])/2 - 1.5
+        # self.loss_G2_param = self.criterionL1 (self.shadow_param_pred, self.shadow_param) * lambda_ 
+        # self.loss_G2_L1 = self.criterionL1 (self.fake_free_shadow_image, self.shadowfree_img) * lambda_
+        # self.loss_G2 = self.loss_G2_param + self.loss_G2_L1
+
         self.loss_G = self.loss_G2_L1 + self.loss_G1_L1
         self.loss_G.backward() 
 
     def get_prediction(self, input_img):
-        inputG1 = self.input_img
+        inputG1 = input_img.to(self.device)
         self.fake_shadowmask = self.netG1_module.get_prediction(inputG1)
         #self.fake_shadowmask = self.shadow_mask
-        inputG2 = torch.cat((self.input_img, self.fake_shadowmask), 1)
-        self.fake_img = self.netG2_module.get_prediction(inputG2)     # pass in your unsegmented images
-        #self.pred.shape                              # predicted segmented images - (8, 3, 128, 128)
-        #self.forward()
+        self.fake_shadowmask = (self.fake_shadowmask>0).type(torch.float)*2-1
+        inputG2 = torch.cat((inputG1, self.fake_shadowmask), 1)
+        self.fake_free_shadow_image = self.netG2_module.get_prediction(inputG2)
+        #self.shadow_param_pred, self.alpha_pred, self.fake_free_shadow_image = self.netG2(self.input_img, self.fake_shadowmask)
 
         RES = dict()
-        RES['final']  = self.fake_img #util.tensor2im(self.final,scale =0)
+        RES['final']  = self.fake_free_shadow_image #util.tensor2im(self.final,scale =0)
         RES['phase1'] = self.fake_shadowmask #util.tensor2im(self.out,scale =0)
         #RES['param'] = self.shadow_param_pred.detach().cpu() 
         #RES['matte'] = util.tensor2im(self.alpha_pred.detach().cpu()/2,scale =0)

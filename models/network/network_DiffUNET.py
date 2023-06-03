@@ -384,8 +384,7 @@ class Unet(nn.Module):
         cond,
         x_self_cond = None
     ):
-        dtype, skip_connect_c = x.dtype, self.skip_connect_condition_fmaps
-
+        skip_connect_c = self.skip_connect_condition_fmaps
         if self.self_condition:
             x_self_cond = default(x_self_cond, lambda: torch.zeros_like(x))
             x = torch.cat((x_self_cond, x), dim = 1)
@@ -432,16 +431,17 @@ class Unet(nn.Module):
         for block1, block2, attn, upsample in self.ups:
             x = torch.cat((x, *h.pop()), dim = 1)
             x = block1(x, t)
-
+            
             x = torch.cat((x, *h.pop()), dim = 1)
             x = block2(x, t)
             x = attn(x)
 
             x = upsample(x)
-
+            
         x = torch.cat((x, r), dim = 1)
 
         x = self.final_res_block(x, t)
+
         return self.final_conv(x)
 
 

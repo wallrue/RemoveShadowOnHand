@@ -19,7 +19,7 @@ from options.train_options import TrainOptions
 from data import CustomDatasetDataLoader
 from models import create_model
 os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE" #Fix error on computer
-
+    
 def progressbar(it, info_dict, size=60, out=sys.stdout):
     """The function for displaying progress bar 
     
@@ -174,17 +174,16 @@ if __name__=='__main__':
     Example of modelname: STGAN, DSDSID, SIDSTGAN, SIDPAMISTGAN
     """
     train_options = TrainOptions()
-    dataset_dir = {"shadowparam": "C:/Users/lemin/Downloads/SYNTHETIC_HAND/",
-                   "shadowsynthetic": "C:/Users/lemin/Downloads/SYNTHETIC_HAND/"}
-    checkpoints_dir = {"shadowparam": "C:/Users/lemin/Downloads/checkpoints/",
-                       "shadowsynthetic": "C:/Users/lemin/Downloads/checkpoints/"}
-    training_dict = [["shadowsynthetic", "STGAN"],
-                     #["shadowparam", "DSDSID"], 
-                     #["shadowsynthetic", "MedSegDiff"], 
+    dataset_dir = {"shadowparam": "C:\\Users\\m1101\\Downloads\\SYNTHETIC_HAND\\",
+                   "shadowsynthetic": "C:\\Users\\m1101\\Downloads\\SYNTHETIC_HAND\\"}
+    checkpoints_dir = {"shadowparam": "C:\\Users\\m1101\\Downloads\\Shadow_Removal\\SID\\_Git_SID\\checkpoints\\",
+                       "shadowsynthetic": "C:\\Users\\m1101\\Downloads\\Shadow_Removal\\SID\\_Git_SID\\checkpoints\\"}
+    training_dict = [#["shadowsynthetic", "DSDSID"], 
+                     ["shadowsynthetic", "MedSegDiff"], 
                      #["shadowparam", "SIDPAMISTGAN"], 
                      #["shadowparam", "SIDPAMIwISTGAN"]
                      #["shadowparam", "STGAN"], 
-                     #["shadowsynthetic", "STGAN"], 
+                     #["shadowsynthetic", "SIDSTGAN"], 
                      #["shadowsynthetic", "SIDPAMISTGAN"], 
                      #["shadowsynthetic", "STGANwHand"]
                      ]

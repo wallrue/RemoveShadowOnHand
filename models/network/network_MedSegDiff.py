@@ -61,7 +61,7 @@ class MedSegDiffNet(nn.Module):
 
         sampling_timesteps = None
         ddim_sampling_eta = 1.
-        self.netG = Unet(   dim = 64,
+        self.netG = Unet(   dim = 32, #64,
                             image_size = self.image_size,
                             mask_channels = gan_output_nc,          # segmentation has 1 channel
                             input_img_channels = gan_input_nc,     # input images have 3 channels
@@ -94,14 +94,13 @@ class MedSegDiffNet(nn.Module):
         # sampling related parameters
 
         self.sampling_timesteps = default(sampling_timesteps, timesteps) # default num sampling timesteps to number of timesteps at training
-
         assert self.sampling_timesteps <= timesteps
         self.is_ddim_sampling = self.sampling_timesteps < timesteps
         self.ddim_sampling_eta = ddim_sampling_eta
-
+        
+        cuda_tensor = torch.FloatTensor if self.device == torch.device('cpu') else torch.cuda.FloatTensor
         # helper function to register buffer from float64 to float32
-
-        register_buffer = lambda val: val.to(torch.float32)
+        register_buffer = lambda val: val.type(cuda_tensor) #.to(torch.float32).to(self.device)
         self.betas = register_buffer(betas)
         self.alphas_cumprod = register_buffer(alphas_cumprod)
         self.alphas_cumprod_prev = register_buffer(alphas_cumprod_prev)
@@ -127,7 +126,7 @@ class MedSegDiffNet(nn.Module):
         # calculations for posterior q(x_{t-1} | x_t, x_0)
 
         self.posterior_variance = betas * (1. - alphas_cumprod_prev) / (1. - alphas_cumprod)
-        self.terior_variance = register_buffer(self.posterior_variance)
+        self.posterior_variance = register_buffer(self.posterior_variance)
 
         # below: log calculation clipped because the posterior variance is 0 at the beginning of the diffusion chain
 
@@ -223,7 +222,7 @@ class MedSegDiffNet(nn.Module):
 
     @torch.no_grad()
     def p_sample(self, x, t, c, x_self_cond = None, clip_denoised = True):
-        b, *_, device = *x.shape, x.device
+        #b, *_, device = *x.shape, x.device
         batched_times = torch.full((x.shape[0],), t, device = x.device, dtype = torch.long)
         model_mean, _, model_log_variance, x_start = self.p_mean_variance(x = x, t = batched_times, c = c, x_self_cond = x_self_cond, clip_denoised = clip_denoised)
         noise = torch.randn_like(x) if t > 0 else 0. # no noise if t == 0
@@ -232,9 +231,9 @@ class MedSegDiffNet(nn.Module):
 
     @torch.no_grad()
     def p_sample_loop(self, shape, cond):
-        batch, device = shape[0], self.betas.device
+        #batch, device = shape[0], self.betas.device
 
-        img = torch.randn(shape, device = device)
+        img = torch.randn(shape, device = self.betas.device)
 
         x_start = None
 
@@ -247,7 +246,7 @@ class MedSegDiffNet(nn.Module):
 
     @torch.no_grad()
     def ddim_sample(self, shape, cond_img, clip_denoised = True):
-        batch, device, total_timesteps, sampling_timesteps, eta, objective = shape[0], self.betas.device, self.num_timesteps, self.sampling_timesteps, self.ddim_sampling_eta, self.objective
+        batch, device, total_timesteps, sampling_timesteps, eta = shape[0], self.betas.device, self.num_timesteps, self.sampling_timesteps, self.ddim_sampling_eta
 
         times = torch.linspace(-1, total_timesteps - 1, steps=sampling_timesteps + 1)   # [-1, 0, 1, 2, ..., T-1] when sampling_timesteps == total_timesteps
         times = list(reversed(times.int().tolist()))
@@ -283,8 +282,8 @@ class MedSegDiffNet(nn.Module):
 
     @torch.no_grad()
     def sample(self, cond_img):
-        batch_size, device = cond_img.shape[0], self.device
-        cond_img = cond_img.to(self.device)
+        batch_size = cond_img.shape[0]
+        cond_img = cond_img #.to(self.device)
 
         image_size, mask_channels = self.image_size, self.mask_channels
         sample_fn = self.p_sample_loop if not self.is_ddim_sampling else self.ddim_sample
@@ -306,11 +305,11 @@ class MedSegDiffNet(nn.Module):
         if self.output_img.ndim == 3:
             self.output_img = rearrange(self.output_img, 'b h w -> b 1 h w')
 
-        b, c, h, w, device, img_size, img_channels, mask_channels = *self.input_img.shape, self.device, self.image_size, self.input_img_channels, self.mask_channels
+        b, c, h, w = self.input_img.shape
 
-        assert h == img_size and w == img_size, f'height and width of image must be {img_size}'
-        assert self.input_img.shape[1] == img_channels, f'your input medical must have {img_channels} channels'
-        assert self.output_img.shape[1] == mask_channels, f'the segmented image must have {mask_channels} channels'
+        assert h == self.image_size and w == self.image_size, f'height and width of image must be {self.image_size}'
+        assert self.input_img.shape[1] == self.input_img_channels, f'your input medical must have {self.input_img_channels} channels'
+        assert self.output_img.shape[1] == self.mask_channels, f'the segmented image must have {self.mask_channels} channels'
 
         self.times = torch.randint(0, self.num_timesteps, (b,), device = self.device).long()
 
@@ -339,7 +338,6 @@ class MedSegDiffNet(nn.Module):
                 x_self_cond.detach_()
 
         # predict and take gradient step
-
         self.fake_target = self.netG(x, t, cond, x_self_cond)
 
         if self.objective == 'pred_noise':
@@ -352,14 +350,14 @@ class MedSegDiffNet(nn.Module):
         else:
             raise ValueError(f'unknown objective {self.objective}')
             
-        return self.fake_target
+        return self.fake_target, self.target
     
     # def backward(self):
     #     self.loss_G2_L1 = self.MSELoss(self.fake_target, self.target)
     #     self.loss_G2_L1.backward()
     @torch.no_grad()    
     def get_prediction(self, input_img):
-        self.input_img = input_img.to(self.device)
+        self.input_img = input_img
         self.pred_img = self.sample(self.input_img)     # pass in your unsegmented images
         #self.pred.shape                              # predicted segmented images - (8, 3, 128, 128)
         #self.forward()
