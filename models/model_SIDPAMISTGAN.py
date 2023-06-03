@@ -1,6 +1,10 @@
 ###############################################################################
 # This file contains the model class for the combination of STGAN and SID
 # STGAN is in charge of detecting shadow. SID is in charge of removing shadow.
+# Example of netG (for STGAN): unet_32, unet_128, unet_256, mobile_unet, 
+# Example of netG (for SID): resnet_9blocks, resnet_6blocks, RESNEXT, 
+#       mobilenetV1, mobilenetV2, mobilenetV3_large, mobilenetV3_small
+# Example of netD: basic, n_layers, pixel
 ###############################################################################
 
 import torch
@@ -25,9 +29,8 @@ class SIDPAMISTGANModel(BaseModel):
         self.loss_names = ['G1_GAN', 'G1_L1', 'D1_real', 'D1_fake', 
                            'G2_param', 'G2_L1', 'G2_GAN', 'D2_real', 'D2_fake']
         self.model_names = ['G1', 'G2']
-        
-        self.netG1 = network_STGAN.define_STGAN(opt, 3, 1, net_g = 'unet_32', net_d = 'n_layers')
-        self.netG2 = define_SIDPAMI(opt, net_g = 'RESNEXT', net_m = 'unet_256', net_d = 'n_layers')
+        self.netG1 = network_STGAN.define_STGAN(opt, 3, 1, net_g = opt.netG[opt.net1_id[0]], net_d = opt.netD[opt.net1_id[1]])
+        self.netG2 = define_SIDPAMI(opt, net_g = opt.netS[opt.net2_id[0]], net_m = opt.netG[opt.net2_id[1]], net_d = opt.netD[opt.net1_id[1]])
             
         #self.netG1.to(self.device)
         #self.netG2.to(self.device)
@@ -98,13 +101,13 @@ class SIDPAMISTGANModel(BaseModel):
 
     def backward2(self):
         # Calculate gradients for G1----------------------
-        lambda1, lambda2  = 2, 5
+        lambda1, lambda2  = 2, 10
         self.loss_G1_GAN = self.GAN_loss(self.pred_fake1, target_is_real = 1)                                           
         self.loss_G1_L1 = self.criterionL1(self.fake_shadow_image, self.shadow_mask)
         self.loss_G1 = self.loss_G1_GAN*lambda1 + self.loss_G1_L1*lambda2
         
         # Calculate gradients for G2----------------------
-        lambda_ = 5
+        lambda_ = 2
         self.shadow_param[:,[1,3,5]] = (self.shadow_param[:,[1,3,5]])/2 - 1.5
         self.loss_G2_param = self.criterionL1(self.shadow_param_pred, self.shadow_param) * lambda_ 
         self.loss_G2_L1 = self.criterionL1(self.fake_free_shadow_image, self.shadowfree_img) * lambda_

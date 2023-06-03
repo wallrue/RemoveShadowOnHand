@@ -12,10 +12,16 @@ from util import util
 class BaseOptions():
     def __init__(self):
         self.initialized = False
-        self.model_name = "" # Define in running file. Eg: "SID"
+        self.model_name = ""        # Be modified in running file. Eg: "SID"
         self.checkpoints_root = ""
-        self.dataset_mode = "" # Define in running file. Eg: "shadowparam"
-        self.data_root = "" # Define in running file. Eg: ".../dataset/ABCD/train/"
+        self.dataset_mode = ""      # Be modified in running file. Eg: "shadowparam"
+        self.data_root = ""         # Be modified in running file. Eg: ".../dataset/ABCD/train/"
+        
+        self.netG = ['unet_32','unet_128','unet_256','mobile_unet']
+        self.netS = ['resnet_9blocks','resnet_6blocks','RESNEXT','mobilenetV1',
+                     'mobilenetV2','mobilenetV3_large','mobilenetV3_small']
+        self.netD = ['basic','n_layers','pixel']
+        self.net1_id, self.net2_id = [], []
         
     def initialize(self, parser):
         # Data loader argument
@@ -37,7 +43,7 @@ class BaseOptions():
         parser.add_argument('--ngf', type=int, default=64, help='# of gen filters in first conv layer')
         parser.add_argument('--ndf', type=int, default=64, help='# of discrim filters in first conv layer')
         parser.add_argument('--epoch', type=str, default='latest', help='which epoch to load? set to latest to use latest cached model')
-       
+        
         # Model training configuration
         parser.add_argument('--gpu_ids', type=str, default='0', help='gpu ids: e.g. 0  0,1,2, 0,2. use -1 for CPU')
         parser.add_argument('--init_type', type=str, default='xavier', help='network initialization [normal|xavier|kaiming|orthogonal]')
@@ -46,7 +52,7 @@ class BaseOptions():
         #parser.add_argument('--model', type=str, help='chooses which model to use. cycle_gan, pix2pix, test')
         #parser.add_argument('--netD', type=str, default='basic', help='selects model to use for netD')
         #parser.add_argument('--netG', type=str, default='resnet_9blocks', help='selects model to use for netG')
-        
+   
         #parser.add_argument('--verbose', action='store_true', help='if specified, print more debugging information')       
         #parser.add_argument('--lambda_GAN', type=float, default=0.0)
         #parser.add_argument('--lambda_smooth', type=float, default=0.0)
@@ -70,13 +76,16 @@ class BaseOptions():
         parser.set_defaults(loadSize=256)
         parser.set_defaults(fineSize=256)
 
+        net_id_name = ""
+        if len(self.net1_id) > 0 or len(self.net2_id) > 0:
+            net_id_name = "_{}-{}".format(self.net1_id, self.net2_id)
         # Model setup: in gather_options by models.get_option_setter()
-        parser.set_defaults(name=self.model_name + "_" + self.dataset_mode)
+        parser.set_defaults(name=self.model_name + "_" + self.dataset_mode + net_id_name)
         parser.set_defaults(model=self.model_name)
         parser.set_defaults(checkpoints_dir=self.checkpoints_root + "\\checkpoints_" + self.model_name)
         
         # Training setup        
-        parser.set_defaults(gpu_ids='0')
+        parser.set_defaults(gpu_ids='-1')
         parser.set_defaults(phase='train_')
         parser.set_defaults(lr=0.0002)
         parser.set_defaults(save_epoch_freq=2)
@@ -155,5 +164,7 @@ class BaseOptions():
             if id >= 0:
                 opt.gpu_ids.append(id)
                 
+        opt.netG, opt.netS, opt.netD, opt.net1_id, opt.net2_id = self.netG, self.netS, self.netD, self.net1_id, self.net2_id
+            
         self.opt = opt
         return self.opt

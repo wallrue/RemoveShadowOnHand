@@ -57,7 +57,7 @@ def print_current_losses(log_dir, model, losses, t_comp):
     """
     message = '{\"testing model\": \"%s\", \"computing time\": %.3f' % (model, t_comp)
     for k, v in losses.items():
-        message += ', \"%s\": %s' % (k, v)
+        message += ', \t\"%s\": %s' % (k, v)
     message += '}'
 
     print(" - Result of testing : " + message)  # Print the message
@@ -78,8 +78,8 @@ def evaluate(dataset, test_model, result_dir, folder_name):
     
     path_list = [result_dir + "//original", 
                  result_dir + "//groudtruth",
-                 result_dir + "//shadowmask",  
-                 result_dir + f"//{folder_name}"]
+                 result_dir + f"//shadowmask_{folder_name}",  
+                 result_dir + f"//shadowfree_{folder_name}"]
     if not os.path.exists(result_dir):
         os.mkdir(result_dir)
     for path in path_list:
@@ -158,21 +158,22 @@ if __name__=='__main__':
     Example of modelname: DSDSID, SIDSTGAN, STGAN
     """
     test_options = TestOptions()
-    dataset_dir = {"shadowparam": "C:/Users/lemin/Downloads/SYNTHETIC_HAND/",
-                   "shadowsynthetic": "C:/Users/lemin/Downloads/SYNTHETIC_HAND/"}
-    checkpoints_dir = {"shadowparam": "C:/Users/lemin/Downloads/checkpoints/",
-                       "shadowsynthetic": "C:/Users/lemin/Downloads/checkpoints/"}
-    testing_dict = [#["shadowparam", "STGAN"],
-                    ["shadowparam", "SIDSTGAN"],
-                    # ["shadowparam", "SIDPAMISTGAN"], 
+    dataset_dir = {"shadowparam": "C:\\Users\\lemin\\Downloads\\SYNTHETIC_HAND\\",
+                   "shadowsynthetic": "C:\\Users\\lemin\\Downloads\\SYNTHETIC_HAND\\"}
+    checkpoints_dir = {"shadowparam": "C:\\Users\\lemin\\Downloads\checkpoints\\",
+                       "shadowsynthetic": "C:\\Users\\lemin\\Downloads\\checkpoints\\"}
+    testing_dict = [["shadowsynthetic", "STGAN", [[2, 1], [2, 2]]],
+                    ["shadowsynthetic", "SIDSTGAN", [[2, 1], [2, 2]]],
+                    ["shadowsynthetic", "SIDPAMISTGAN", [[2, 1], [2, 2]]], 
                     # ["shadowsynthetic", "STGAN"], 
                     # ["shadowsynthetic", "SIDSTGAN"],
                     # ["shadowsynthetic", "STGANwHand"]
                     ]
     result_dir = os.getcwd() + "\\result_set\\"
     
-    for dataset_name, model_name in testing_dict:    
+    for dataset_name, model_name, netid_list in testing_dict:    
         print('============== Start testing: dataset {}, model {} =============='.format(model_name, dataset_name))
+        test_options.net1_id, test_options.net2_id = netid_list
         test_options.dataset_mode = dataset_name
         test_options.data_root = dataset_dir[dataset_name]
         test_options.checkpoints_root = checkpoints_dir[dataset_name]          
@@ -187,8 +188,9 @@ if __name__=='__main__':
         model = create_model(opt)
         model.setup(opt)
         
-        PNSR_score, SSIM_score, computing_time = evaluate(dataset, model, result_dir, f"{model_name}_{dataset_name}")
-        print_current_losses(os.path.join(result_dir, 'valid.log'), model_name, {"PNSR_score": PNSR_score, "SSIM_score": SSIM_score}, computing_time)
+        experiment_name = opt.name #"{}_{}".format(model_name, dataset_name)
+        PNSR_score, SSIM_score, computing_time = evaluate(dataset, model, result_dir, experiment_name)
+        print_current_losses(os.path.join(result_dir, 'valid.log'), experiment_name, {"PNSR_score": PNSR_score, "SSIM_score": SSIM_score}, computing_time)
         
         #dataset_dir[dataset_name] = "C:/Users/m1101/Downloads/Shadow_Removal/SID/_Git_SID/data_processing/dataset/NTUST_HS_Test/"
         

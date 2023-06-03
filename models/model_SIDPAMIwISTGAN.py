@@ -1,11 +1,13 @@
 ###############################################################################
 # This file contains the model class for the combination of STGAN and SID
 # STGAN is in charge of detecting shadow. SID is in charge of removing shadow.
+# Example of netG (for STGAN): unet_32, unet_128, unet_256, mobile_unet, 
+# Example of netG (for SID): resnet_9blocks, resnet_6blocks, RESNEXT, 
+#       mobilenetV1, mobilenetV2, mobilenetV3_large, mobilenetV3_small
+# Example of netD: basic, n_layers, pixel
 ###############################################################################
 
 import torch
-#import numpy as np
-#from torch.autograd import Variable
 from .base_model import BaseModel
 from .network import network_GAN
 from .network import network_STGAN
@@ -27,7 +29,6 @@ class SIDPAMIwISTGANModel(BaseModel):
         self.loss_names = ['G1_GAN', 'G1_L1', 'D1_real', 'D1_fake', 
                            'G2_param', 'G2_L1', 'G2_L1_I']
         self.model_names = ['G1', 'G2']
-        
         self.netG1 = network_STGAN.define_STGAN(opt, 3, 1, net_g = 'unet_32', net_d = 'n_layers')
         self.netG2 = define_SIDPAMIwINet(opt, net_g = 'mobilenetV2', net_m = 'unet_256', net_i = 'unet_256')
             

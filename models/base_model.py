@@ -22,6 +22,7 @@ class BaseModel():
         self.gpu_ids = opt.gpu_ids
         self.isTrain = opt.isTrain
         self.device = torch.device('cuda:{}'.format(opt.gpu_ids[0])) if len(opt.gpu_ids)>0 else torch.device('cpu')
+        
         self.save_dir = os.path.join(opt.checkpoints_dir, opt.name)
         
         # When model doesn't vary, we set torch.backends.cudnn.benchmark to get the benefit 

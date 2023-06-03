@@ -9,7 +9,7 @@ from .network_GAN import define_G
 import torch.nn.functional as F
 
 class SIDNet(nn.Module):
-    def __init__(self, opt, net_g, net_d):
+    def __init__(self, opt, net_g, net_m):
         """ SIDNet includes G net and M net, which is to relit and remove shadow 
         from available shadow mask and full shadow image
         """
@@ -17,7 +17,7 @@ class SIDNet(nn.Module):
         #self.training = istrain    
         self.netG = define_G(opt.input_nc+1, 6, opt.ngf, net_g, opt.norm,
                                       not opt.no_dropout, opt.init_type, opt.init_gain, [])
-        self.netM = define_G(6+1, opt.output_nc, opt.ngf, net_d, opt.norm,
+        self.netM = define_G(6+1, opt.output_nc, opt.ngf, net_m, opt.norm,
                                       not opt.no_dropout, opt.init_type, opt.init_gain, [])
 
     def forward(self, input_img, fake_shadow_image):
@@ -49,12 +49,12 @@ class SIDNet(nn.Module):
         
         # Compute free-shadow image
         self.final = (self.input_img/2+0.5)*(1-self.alpha_pred) + self.lit*(self.alpha_pred)
-        self.final = self.final*2-1
+        self.final = torch.clamp(self.final*2-1, -1.0, 1.0)
         return self.shadow_param_pred, self.alpha_pred, self.final
 
-def define_SID(opt, net_g = 'RESNEXT', net_d = 'unet_256'):
+def define_SID(opt, net_g = 'RESNEXT', net_m = 'unet_256'):
     net = None
-    net = SIDNet(opt, net_g, net_d)
+    net = SIDNet(opt, net_g, net_m)
     if len(opt.gpu_ids)>0:
         assert(torch.cuda.is_available())
         net.to(opt.gpu_ids[0])

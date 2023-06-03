@@ -172,15 +172,16 @@ if __name__=='__main__':
     - training_dict: the model to be trained {datasetname: modelname}
     Example of datasetname: shadowparam, shadowsynthetic, single
     Example of modelname: STGAN, DSDSID, SIDSTGAN, SIDPAMISTGAN
+    Example of net_id: lisg of net_id is defined in base_options
     """
     train_options = TrainOptions()
-    dataset_dir = {"shadowparam": "C:\\Users\\m1101\\Downloads\\SYNTHETIC_HAND\\",
-                   "shadowsynthetic": "C:\\Users\\m1101\\Downloads\\SYNTHETIC_HAND\\"}
-    checkpoints_dir = {"shadowparam": "C:\\Users\\m1101\\Downloads\\Shadow_Removal\\SID\\_Git_SID\\checkpoints\\",
-                       "shadowsynthetic": "C:\\Users\\m1101\\Downloads\\Shadow_Removal\\SID\\_Git_SID\\checkpoints\\"}
-    training_dict = [#["shadowsynthetic", "DSDSID"], 
-                     ["shadowsynthetic", "MedSegDiff"], 
-                     #["shadowparam", "SIDPAMISTGAN"], 
+    dataset_dir = {"shadowparam": "C:\\Users\\lemin\\Downloads\\SYNTHETIC_HAND\\",
+                   "shadowsynthetic": "C:\\Users\\lemin\\Downloads\\SYNTHETIC_HAND\\"}
+    checkpoints_dir = {"shadowparam": "C:\\Users\\lemin\\Downloads\checkpoints\\",
+                       "shadowsynthetic": "C:\\Users\\lemin\\Downloads\\checkpoints\\"}
+    training_dict = [["shadowsynthetic", "STGAN", [[2, 1], [2, 2]]], 
+                     ["shadowsynthetic", "SIDSTGAN", [[2, 1], [2, 2]]],
+                     ["shadowsynthetic", "SIDPAMISTGAN", [[2, 1], [2, 2]]], 
                      #["shadowparam", "SIDPAMIwISTGAN"]
                      #["shadowparam", "STGAN"], 
                      #["shadowsynthetic", "SIDSTGAN"], 
@@ -188,8 +189,9 @@ if __name__=='__main__':
                      #["shadowsynthetic", "STGANwHand"]
                      ]
     
-    for dataset_name, model_name in training_dict:
-        print('============== Start training: dataset {}, model {} =============='.format(model_name, dataset_name))
+    for dataset_name, model_name, netid_list in training_dict:
+        print('============== Start training: dataset {}, model {} =============='.format(model_name, dataset_name))  
+        train_options.net1_id, train_options.net2_id = netid_list  
         train_options.dataset_mode = dataset_name
         train_options.data_root = dataset_dir[dataset_name]
         train_options.checkpoints_root = checkpoints_dir[dataset_name]        

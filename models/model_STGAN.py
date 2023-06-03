@@ -1,3 +1,10 @@
+###############################################################################
+# This file contains the model class for the combination of STGAN and SID
+# STGAN is in charge of detecting shadow. SID is in charge of removing shadow.
+# Example of netG (for STGAN): unet_32, unet_128, unet_256, mobile_unet
+# Example of netD: basic, n_layers, pixel
+###############################################################################
+
 import torch
 from .base_model import BaseModel
 from .network import network_GAN
@@ -15,14 +22,15 @@ class STGANModel(BaseModel):
 
     def initialize(self, opt):
         BaseModel.initialize(self, opt)
+        
         self.isTrain = opt.isTrain
         self.loss_names = ['G1_GAN', 'G1_L1', 'G2_GAN', 'G2_L1',
                            'D1_real', 'D1_fake', 'D2_real', 'D2_fake']
         self.model_names = ['STGAN1', 'STGAN2']
         self.cuda_tensor = torch.FloatTensor if self.device == torch.device('cpu') else torch.cuda.FloatTensor
         
-        self.netSTGAN1 = network_STGAN.define_STGAN(opt, 3, 1, net_g = 'mobile_unet', net_d = 'n_layers')
-        self.netSTGAN2 = network_STGAN.define_STGAN(opt, 4, 3, net_g = 'mobile_unet', net_d = 'n_layers')
+        self.netSTGAN1 = network_STGAN.define_STGAN(opt, 3, 1, net_g = opt.netG[opt.net1_id[0]], net_d = opt.netD[opt.net1_id[1]])
+        self.netSTGAN2 = network_STGAN.define_STGAN(opt, 4, 3, net_g = opt.netG[opt.net2_id[0]], net_d = opt.netD[opt.net2_id[1]])
         
         self.netSTGAN1_module = self.netSTGAN1.module if len(opt.gpu_ids) > 0 else self.netSTGAN1
         self.netSTGAN2_module = self.netSTGAN2.module if len(opt.gpu_ids) > 0 else self.netSTGAN2

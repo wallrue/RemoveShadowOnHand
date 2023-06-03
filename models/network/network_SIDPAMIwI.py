@@ -51,11 +51,12 @@ class SIDPAMIwINet(nn.Module):
         
         # Compute free-shadow image
         self.final = (self.input_img/2+0.5)*(1-self.alpha_pred) + self.lit*(self.alpha_pred)
-        self.final = self.final*2-1
+        self.final = torch.clamp(self.final*2-1, -1.0, 1.0)
         
         inputI = torch.cat([self.input_img, self.final.detach(), self.fake_shadow_image], 1)
         self.residual = self.netI(inputI)
         self.final_I = self.final+self.residual
+        self.final_I = torch.clamp(self.final_I, -1.0, 1.0)
         
         return self.shadow_param_pred, self.alpha_pred, self.final, self.final_I
 
