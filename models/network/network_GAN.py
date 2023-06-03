@@ -543,7 +543,7 @@ class MobileUNet(nn.Module):
         x7 = self.irb_bottleneck6(x6) #(160,7,7)
         x8 = self.irb_bottleneck7(x7) #(320,7,7)
         x9 = self.conv1x1_encode(x8) #(1280,7,7) s5
-
+        print(x6.shape, x7.shape, x9.shape, self.D_irb1(x9).shape)
         # Right arm / Decoding arm with skip connections
         d1 = self.D_irb1(x9) + x6
         d2 = self.D_irb2(d1) + x4

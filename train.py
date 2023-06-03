@@ -178,12 +178,13 @@ if __name__=='__main__':
                    "shadowsynthetic": "C:/Users/lemin/Downloads/SYNTHETIC_HAND/"}
     checkpoints_dir = {"shadowparam": "C:/Users/lemin/Downloads/checkpoints/",
                        "shadowsynthetic": "C:/Users/lemin/Downloads/checkpoints/"}
-    training_dict = [#["shadowsynthetic", "DSDSID"], 
-                     ["shadowsynthetic", "MedSegDiff"], 
+    training_dict = [["shadowsynthetic", "STGAN"],
+                     #["shadowparam", "DSDSID"], 
+                     #["shadowsynthetic", "MedSegDiff"], 
                      #["shadowparam", "SIDPAMISTGAN"], 
                      #["shadowparam", "SIDPAMIwISTGAN"]
                      #["shadowparam", "STGAN"], 
-                     #["shadowsynthetic", "SIDSTGAN"], 
+                     #["shadowsynthetic", "STGAN"], 
                      #["shadowsynthetic", "SIDPAMISTGAN"], 
                      #["shadowsynthetic", "STGANwHand"]
                      ]

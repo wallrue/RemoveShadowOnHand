@@ -28,7 +28,7 @@ class SIDSTGANModel(BaseModel):
                            'G2_param', 'G2_L1']
         self.model_names = ['G1', 'G2']
         
-        self.netG1 = network_STGAN.define_STGAN(opt, 3, 1, net_g = 'unet_32', net_d = 'n_layers')
+        self.netG1 = network_STGAN.define_STGAN(opt, 3, 1, net_g = 'mobile_unet', net_d = 'n_layers')
         self.netG2 = define_SID(opt, 'mobilenetV3_large', 'unet_256')
             
         #self.netG1.to(self.device)
