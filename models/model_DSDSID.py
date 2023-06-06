@@ -23,13 +23,12 @@ class DSDSIDModel(BaseModel):
         self.isTrain = opt.isTrain
         self.loss_names = ['G1_L1', 'G1DST1_L1', 'G1DST2_L1', 'G2_param', 'G2_L1']
         self.model_names = {'G1', 'G2'}
-        self.cuda_tensor = torch.FloatTensor if self.device == torch.device('cpu') else torch.cuda.FloatTensor
         
         self.netG1 = define_DSD(opt)
-        self.netG2 = define_SID(opt)
+        self.netG2 = define_SID(opt, net_g = opt.netS[opt.net2_id[0]], net_m = opt.netG[opt.net2_id[1]])
             
-        #self.netG1.to(self.device)
-        #self.netG2.to(self.device)
+        self.netG1_module = self.netG1.module if len(opt.gpu_ids) > 0 else self.netG1
+        self.netG2_module = self.netG2.module if len(opt.gpu_ids) > 0 else self.netG2
         
         if self.isTrain:
             self.bce_logit = bce_logit_pred
@@ -37,9 +36,10 @@ class DSDSIDModel(BaseModel):
             self.criterionL1 = torch.nn.L1Loss().to(1) # Evaluation value 1 by L1Loss
             
             # Initialize optimizers
-            self.optimizer_G1 = torch.optim.Adam(self.netG1.parameters(),
+            self.optimizer_G1 = torch.optim.Adam(self.netG1_module.parameters(),
                                                 lr=opt.lr, betas=(opt.beta1, 0.999), weight_decay=1e-5)
-            self.optimizer_G2 = torch.optim.Adam(self.netG2.parameters(),
+            self.optimizer_G2 = torch.optim.Adam([{'params': self.netG2_module.netG.parameters()},
+                                                  {'params': self.netG2_module.netM.parameters()}],
                                                 lr=opt.lr, betas=(opt.beta1, 0.999), weight_decay=1e-5)
             self.optimizers = [self.optimizer_G1, self.optimizer_G2]
 
@@ -129,12 +129,12 @@ class DSDSIDModel(BaseModel):
     def optimize_parameters(self):
         self.forward1()
         
-        self.set_requires_grad([self.netG2], False)  # Enable backprop for D1, D2
+        self.set_requires_grad([self.netG2_module.netG, self.netG2_module.netM], False)  # Enable backprop for D1, D2
         self.optimizer_G1.zero_grad()
         self.backward1()
         self.optimizer_G1.step()
      
-        self.set_requires_grad([self.netG2], True)  # Enable backprop for D1, D2
+        self.set_requires_grad([self.netG2_module.netG, self.netG2_module.netM], True)  # Enable backprop for D1, D2
         self.optimizer_G2.zero_grad()
         self.backward2()
         self.optimizer_G2.step()

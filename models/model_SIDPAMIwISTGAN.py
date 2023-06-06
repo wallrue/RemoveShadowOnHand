@@ -29,13 +29,14 @@ class SIDPAMIwISTGANModel(BaseModel):
         self.loss_names = ['G1_GAN', 'G1_L1', 'D1_real', 'D1_fake', 
                            'G2_param', 'G2_L1', 'G2_L1_I']
         self.model_names = ['G1', 'G2']
-        self.netG1 = network_STGAN.define_STGAN(opt, 3, 1, net_g = 'unet_32', net_d = 'n_layers')
-        self.netG2 = define_SIDPAMIwINet(opt, net_g = 'mobilenetV2', net_m = 'unet_256', net_i = 'unet_256')
+        self.netG1 = network_STGAN.define_STGAN(opt, 3, 1, net_g = opt.netG[opt.net1_id[0]], net_d = opt.netD[opt.net1_id[1]])
+        self.netG2 = define_SIDPAMIwINet(opt, net_g = opt.netS[opt.net2_id[0]], net_m = opt.netG[opt.net2_id[1]], net_i = opt.netG[opt.net2_id[1]])
             
         #self.netG1.to(self.device)
         #self.netG2.to(self.device)
         
         self.netG1_module = self.netG1.module if len(opt.gpu_ids) > 0 else self.netG1
+        self.netG2_module = self.netG2.module if len(opt.gpu_ids) > 0 else self.netG2
         
         if self.isTrain:
             # Define loss functions
@@ -46,7 +47,8 @@ class SIDPAMIwISTGANModel(BaseModel):
         
             # Initialize optimizers
             self.optimizer_G = torch.optim.Adam([{'params': self.netG1_module.netG.parameters()}, 
-                                                 {'params': self.netG2.parameters()}],
+                                                 {'params': self.netG2_module.netG.parameters()},
+                                                 {'params': self.netG2_module.netM.parameters()}],
                                                 lr=opt.lr, betas=(opt.beta1, 0.999), weight_decay=1e-5)
             self.optimizer_D = torch.optim.Adam(self.netG1_module.netD.parameters(),
                                                 lr=opt.lr, betas=(opt.beta1, 0.999), weight_decay=1e-5)

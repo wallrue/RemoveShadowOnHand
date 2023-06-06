@@ -33,10 +33,12 @@ class SIDNet(nn.Module):
         n = self.shadow_param_pred.shape[0]
         
         # Compute lit image
-        # self.shadow_param_pred = torch.mean(self.shadow_param_pred.view([n,m,-1]),dim=2)
+        if len(self.shadow_param_pred.shape) > 2: 
+            self.shadow_param_pred = torch.mean(self.shadow_param_pred.view([n,6,-1]),dim=2)
+
         add = self.shadow_param_pred[:,[0,2,4]]
         mul = (self.shadow_param_pred[:,[1,3,5]]*2) +3
-        
+
         add = add.view(n,3,1,1).expand((n,3,w,h))
         mul = mul.view(n,3,1,1).expand((n,3,w,h))
         self.lit = self.input_img.clone()/2+0.5

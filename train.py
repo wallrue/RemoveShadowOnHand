@@ -139,7 +139,7 @@ def train_loop(opt, dataset, model):
         
         # Validation section
         with torch.no_grad():
-            valid_losses, val_loss_phase1, n_valid_loss = 0, 0, 1
+            valid_losses, val_loss_phase1, n_valid_loss = 0, 0, 0
             dataset.working_subset = "valid"
             assert len(dataset) > 0, "valid dataset is empty, please change opt.validDataset_split"
             for valid_id, data in enumerate(dataset, 0):
@@ -153,7 +153,7 @@ def train_loop(opt, dataset, model):
                 output = model.get_prediction(full_shadow_img)       
                 val_loss_phase1 += model.criterionL1(output['phase1'], shadow_mask) # Another loss (shadow detect, hand segment,...)
                 valid_losses += model.criterionL1(output['final'], shadowfree_img)
-                n_valid_loss += valid_id
+                n_valid_loss += 1
                     
             total_losses = {"valid_reconstruction": valid_losses/ n_valid_loss, 
                             "valid_phase1": val_loss_phase1/ n_valid_loss, **train_losses} #merging 2 dicts
@@ -177,18 +177,34 @@ if __name__=='__main__':
     train_options = TrainOptions()
     dataset_dir = {"shadowparam": "C:\\Users\\lemin\\Downloads\\SYNTHETIC_HAND\\",
                    "shadowsynthetic": "C:\\Users\\lemin\\Downloads\\SYNTHETIC_HAND\\"}
-    checkpoints_dir = {"shadowparam": "C:\\Users\\lemin\\Downloads\checkpoints\\",
-                       "shadowsynthetic": "C:\\Users\\lemin\\Downloads\\checkpoints\\"}
-    training_dict = [["shadowsynthetic", "STGAN", [[2, 1], [2, 2]]], 
-                     ["shadowsynthetic", "SIDSTGAN", [[2, 1], [2, 2]]],
-                     ["shadowsynthetic", "SIDPAMISTGAN", [[2, 1], [2, 2]]], 
-                     #["shadowparam", "SIDPAMIwISTGAN"]
-                     #["shadowparam", "STGAN"], 
-                     #["shadowsynthetic", "SIDSTGAN"], 
-                     #["shadowsynthetic", "SIDPAMISTGAN"], 
-                     #["shadowsynthetic", "STGANwHand"]
-                     ]
+    checkpoints_dir = {"shadowparam": "C:\\Users\\lemin\\Downloads\\checkpoints",
+                       "shadowsynthetic": "C:\\Users\\lemin\\Downloads\\checkpoints"}
     
+    """ DEFINE EXPERIMENT """
+    BACKBONE_TEST = False
+    
+    # Experient 1: Test the performance of backbones on "shadowparam" dataset
+    if BACKBONE_TEST:
+        model_name_list = ["SIDPAMISTGAN", "SIDPAMIwISTGAN"]
+        training_dict = list()
+        for model_name in model_name_list:
+            if model_name == "STGAN":        
+                training_list = [["shadowparam", model_name, [[i_netG, i_netD],[i_netG, i_netD]]] for i_netG in range(4) for i_netD in range(3)]
+            else: 
+                training_list = [["shadowparam", model_name, [[i_netG, i_netD],[i_netS, i_netG]]] for i_netG in range(4) for i_netD in range(3) for i_netS in range(7)] 
+            training_dict = training_dict + training_list
+    # Experient 2: Test the best backbone from experiment 1 in "shadowsynthetic" dataset
+    else:
+        training_dict = [["shadowsynthetic",   "STGAN",            [[2, 1], [2, 2]]], 
+                         ["shadowsynthetic",   "SIDSTGAN",         [[2, 1], [2, 2]]],
+                         ["shadowsynthetic",   "SIDPAMISTGAN",     [[2, 1], [2, 2]]], 
+                         ["shadowsynthetic",   "SIDPAMIwISTGAN",   [[2, 1], [2, 2]]], 
+                         ["shadowsynthetic",   "STGANwHand",       [[2, 1], [2, 2]]],
+                         ["shadowsynthetic",   "DSDSID",           [[], [2, 2]]],
+                         ["shadowsynthetic",   "MedSegDiff",       [[], [2, 2]]],
+                         ]
+
+    """ RUN ONE """
     for dataset_name, model_name, netid_list in training_dict:
         print('============== Start training: dataset {}, model {} =============='.format(model_name, dataset_name))  
         train_options.net1_id, train_options.net2_id = netid_list  
@@ -197,6 +213,7 @@ if __name__=='__main__':
         train_options.checkpoints_root = checkpoints_dir[dataset_name]        
         train_options.model_name = model_name
         opt = train_options.parse()
+        opt.use_ycrcb = False
         
         # Dataset loading
         data_loader = CustomDatasetDataLoader(opt)

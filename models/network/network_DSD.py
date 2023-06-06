@@ -144,7 +144,6 @@ class DSDNet(nn.Module):
         self.refine3_hl = ConvBlock()
         self.refine2_hl = ConvBlock()
         self.refine1_hl = ConvBlock()
-
         self.refine0_hl = ConvBlock()
 
         self.attention4_hl = AttentionModule()

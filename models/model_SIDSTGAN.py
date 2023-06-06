@@ -37,6 +37,7 @@ class SIDSTGANModel(BaseModel):
         #self.netG2.to(self.device)
         
         self.netG1_module = self.netG1.module if len(opt.gpu_ids) > 0 else self.netG1
+        self.netG2_module = self.netG2.module if len(opt.gpu_ids) > 0 else self.netG2
         
         if self.isTrain:
             # Define loss functions
@@ -47,7 +48,8 @@ class SIDSTGANModel(BaseModel):
         
             # Initialize optimizers
             self.optimizer_G = torch.optim.Adam([{'params': self.netG1_module.netG.parameters()}, 
-                                                 {'params': self.netG2.parameters()}],
+                                                 {'params': self.netG2_module.netG.parameters()},
+                                                 {'params': self.netG2_module.netM.parameters()}],
                                                 lr=opt.lr, betas=(opt.beta1, 0.999), weight_decay=1e-5)
             self.optimizer_D = torch.optim.Adam(self.netG1_module.netD.parameters(),
                                                 lr=opt.lr, betas=(opt.beta1, 0.999), weight_decay=1e-5)
@@ -91,9 +93,7 @@ class SIDSTGANModel(BaseModel):
         self.loss_G1_GAN = self.GAN_loss(self.pred_fake, target_is_real = 1)                                           
         self.loss_G1_L1 = self.criterionL1(self.fake_shadow_image, self.shadow_mask)
         self.loss_G1 = self.loss_G1_GAN*lambda1 + self.loss_G1_L1*lambda2
-        self.loss_G1.backward()
-    
-    def backward3(self):
+ 
         # Calculate gradients for G2----------------------
         lambda_ = 2
         self.shadow_param[:,[1,3,5]] = (self.shadow_param[:,[1,3,5]])/2 - 1.5
@@ -101,7 +101,8 @@ class SIDSTGANModel(BaseModel):
         self.loss_G2_L1 = self.criterionL1 (self.fake_free_shadow_image, self.shadowfree_img) * lambda_
         self.loss_G2 = self.loss_G2_param + self.loss_G2_L1
         
-        self.loss_G2.backward()
+        self.loss_G = self.loss_G1 + self.loss_G2
+        self.loss_G.backward()
     
     def get_prediction(self, input_img):
         self.input_img = input_img.to(self.device)

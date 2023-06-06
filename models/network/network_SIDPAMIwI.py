@@ -35,6 +35,10 @@ class SIDPAMIwINet(nn.Module):
         n = self.shadow_param_pred.shape[0]
         
         # Compute lit image
+        if len(self.shadow_param_pred.shape) > 2: 
+            self.shadow_param_pred = torch.mean(self.shadow_param_pred.view([n,6,-1]),dim=2)
+        
+        # Compute lit image
         # self.shadow_param_pred = torch.mean(self.shadow_param_pred.view([n,m,-1]),dim=2)
         add = self.shadow_param_pred[:,[0,2,4]] /2 
         mul = self.shadow_param_pred[:,[1,3,5]] + 2

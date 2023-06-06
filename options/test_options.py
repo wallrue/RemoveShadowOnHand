@@ -17,7 +17,8 @@ class TestOptions(BaseOptions):
         # Data transform argument
         parser.add_argument('--resize_or_crop', type=str, default='resize_and_crop', help='scaling and cropping of images at load time [resize_and_crop|crop|scale_width|scale_width_and_crop|none]')
         parser.add_argument('--no_flip', action='store_true', default=True, help='if specified, do not flip the images for data augmentation')
- 
+        parser.add_argument('--use_ycrcb', action='store_true', default=False, help='if specified, use YCrCb or RGB')
+
         # Model training configuration
         parser.add_argument('--norm', type=str, default='instance', help='instance normalization or batch normalization')
         parser.add_argument('--no_dropout', action='store_true', help='no dropout for the generator')

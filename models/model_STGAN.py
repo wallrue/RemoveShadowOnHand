@@ -56,7 +56,7 @@ class STGANModel(BaseModel):
         self.shadow_mask = input['shadowmask'].to(self.device)
         self.shadowfree_img = input['shadowfree'].to(self.device)
         
-        self.shadow_mask = (self.shadow_mask>0.9).type(torch.float)*2-1
+        self.shadow_mask = (self.shadow_mask>0).type(torch.float)*2-1
         #self.nim = self.input_img.shape[1]
     
     def forward(self):

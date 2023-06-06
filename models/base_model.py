@@ -65,7 +65,7 @@ class BaseModel():
         if not self.isTrain:
             print("LOADING %s"%(self.name))
             self.load_networks(opt.epoch)
-        self.print_networks()
+        self.print_networks(opt)
         
     def get_scheduler(self, optimizer, opt):
         if opt.lr_policy == 'lambda':
@@ -135,18 +135,28 @@ class BaseModel():
             net.load_state_dict(state_dict)
                 
     # Print network information
-    def print_networks(self):
-        print('---------- Networks initialized -------------')
+    def print_networks(self, opt):
+        message = ""
+        message += '---------- Networks initialized -------------\n'
         for name in self.model_names:
             if isinstance(name, str):
                 net = getattr(self, 'net' + name)
                 num_params = 0
                 for param in net.parameters():
                     num_params += param.numel()
-                print(net)
-                print('[Network %s] Total number of parameters : %.3f M' % (name, num_params / 1e6))
-        print('-----------------------------------------------')
-        
+                message += "{}\n".format(net)
+                message += "[Network {}] Total number of parameters : {:.3f} M\n".format(name, num_params / 1e6)
+        message += '-----------------------------------------------'
+        print(message)
+
+        # Save to the disk
+        expr_dir = os.path.join(opt.checkpoints_dir, opt.name)
+        util.mkdirs(expr_dir)
+        file_name = os.path.join(expr_dir, 'network.txt')
+        with open(file_name, 'wt') as opt_file:
+            opt_file.write(message)
+            opt_file.write('\n')
+            
     def update_learning_rate(self,loss=None):
         for scheduler in self.schedulers:
             if not loss:

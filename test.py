@@ -162,13 +162,16 @@ if __name__=='__main__':
                    "shadowsynthetic": "C:\\Users\\lemin\\Downloads\\SYNTHETIC_HAND\\"}
     checkpoints_dir = {"shadowparam": "C:\\Users\\lemin\\Downloads\checkpoints\\",
                        "shadowsynthetic": "C:\\Users\\lemin\\Downloads\\checkpoints\\"}
-    testing_dict = [["shadowsynthetic", "STGAN", [[2, 1], [2, 2]]],
-                    ["shadowsynthetic", "SIDSTGAN", [[2, 1], [2, 2]]],
-                    ["shadowsynthetic", "SIDPAMISTGAN", [[2, 1], [2, 2]]], 
-                    # ["shadowsynthetic", "STGAN"], 
-                    # ["shadowsynthetic", "SIDSTGAN"],
-                    # ["shadowsynthetic", "STGANwHand"]
+
+    testing_dict = [["shadowsynthetic",   "STGAN",            [[2, 1], [2, 2]]], 
+                    ["shadowsynthetic",   "SIDSTGAN",         [[2, 1], [2, 2]]],
+                    ["shadowsynthetic",   "SIDPAMISTGAN",     [[2, 1], [2, 2]]], 
+                    ["shadowsynthetic",   "SIDPAMIwISTGAN",   [[2, 1], [2, 2]]], 
+                    ["shadowsynthetic",   "STGANwHand",       [[2, 1], [2, 2]]],
+                    ["shadowsynthetic",   "DSDSID",           [[], [2, 2]]],
+                    ["shadowsynthetic",   "MedSegDiff",       [[], [2, 2]]],
                     ]
+        
     result_dir = os.getcwd() + "\\result_set\\"
     
     for dataset_name, model_name, netid_list in testing_dict:    
@@ -179,6 +182,7 @@ if __name__=='__main__':
         test_options.checkpoints_root = checkpoints_dir[dataset_name]          
         test_options.model_name = model_name
         opt = test_options.parse()
+        opt.use_ycrcb = False
         
         # Dataset loading       
         data_loader = CustomDatasetDataLoader(opt)
@@ -193,23 +197,3 @@ if __name__=='__main__':
         print_current_losses(os.path.join(result_dir, 'valid.log'), experiment_name, {"PNSR_score": PNSR_score, "SSIM_score": SSIM_score}, computing_time)
         
         #dataset_dir[dataset_name] = "C:/Users/m1101/Downloads/Shadow_Removal/SID/_Git_SID/data_processing/dataset/NTUST_HS_Test/"
-        
-#-----------------------------
-    # dataset_dir = {"shadowparam": "C:/Users/lemin/Downloads/NTUST_TU",
-    #                "shadowsynthetic": "C:/Users/lemin/Downloads/NTUST_TU"}
-    # result_dir = os.getcwd() + "\\result_set_TU\\"
-    # for dataset_name, model_name in testing_dict:    
-    #     print('============== Start testing: dataset {}, model {} =============='.format(model_name, dataset_name))
-    #     test_options.dataset_mode = dataset_name
-    #     test_options.data_root = dataset_dir[dataset_name]
-    #     test_options.checkpoints_root = checkpoints_dir[dataset_name]          
-    #     test_options.model_name = model_name
-    #     opt = test_options.parse()
-        
-    #     data_loader = CustomDatasetDataLoader(opt)
-    #     dataset = data_loader.load_data()
-    #     model = create_model(opt)
-    #     model.setup(opt)
-        
-    #     PNSR_score, SSIM_score, computing_time = evaluate(dataset, model, result_dir, f"{model_name}_{dataset_name}")
-    #     print_current_losses(os.path.join(result_dir, 'valid.log'), model_name, {"PNSR_score": PNSR_score, "SSIM_score": SSIM_score}, computing_time)

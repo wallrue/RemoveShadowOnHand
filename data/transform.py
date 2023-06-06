@@ -5,6 +5,7 @@
 
 import random
 import numbers
+import torch
 import torchvision.transforms as transforms
 from PIL import Image, ImageOps
 
@@ -37,10 +38,14 @@ def get_transform_list(opt):
     if opt.isTrain:
         if not opt.no_flip:
             transform_list.append(RandomHorizontalFlip())
-
+            
     # Finish the transform list
     transform_list += [transforms.ToTensor(),
                        transforms.Normalize(0.5, 0.5)]
+    
+    if opt.use_ycrcb:
+        transform_list.append(RrgToYcrcb())
+    
     return transform_list
 
 class RandomCrop(object):
@@ -134,4 +139,27 @@ class Normalize(object):
 
     def __call__(self, tensor):
         tensor = (tensor - self.mean)/self.std
+        return tensor
+    
+class RrgToYcrcb(object):
+    """Given mean: (R, G, B) and std: (R, G, B),
+    will normalize each channel of the torch.*Tensor, i.e.
+    channel = (channel - mean) / std
+    """
+
+    def __init__(self, scale_params = 1.0):
+        self.scale_params = scale_params
+
+    def __call__(self, tensor): #tensor (3 channels) in range [0, 1]
+        if tensor.shape[0] == 3:
+            r = tensor[0,:,:]*255.0
+            g = tensor[1,:,:]*255.0
+            b = tensor[2,:,:]*255.0
+            
+            y = (.299*r + .587*g + .114*b)*self.scale_params
+            cb = (128 -.168736*r -.331364*g + .5*b)*self.scale_params
+            cr = (128 +.5*r - .418688*g - .081312*b)**self.scale_params
+            
+            tensor = torch.stack((y/255.0,cb/255.0,cr/255.0))
+    
         return tensor
