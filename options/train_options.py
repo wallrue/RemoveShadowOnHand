@@ -27,8 +27,8 @@ class TrainOptions(BaseOptions):
         parser.add_argument('--lr_policy', type=str, default='lambda', help='learning rate policy: lambda|step|plateau|cosine')
         
         # Training process configuration
-        parser.add_argument('--niter', type=int, default=1, help='# of iter at starting learning rate')
-        parser.add_argument('--niter_decay', type=int, default=1, help='# of iter to linearly decay learning rate to zero; p/s: lr increases at first, then be zero, then reduces')
+        parser.add_argument('--niter', type=int, default=5, help='# of iter at starting learning rate')
+        parser.add_argument('--niter_decay', type=int, default=5, help='# of iter to linearly decay learning rate to zero; p/s: lr increases at first, then be zero, then reduces')
         parser.add_argument('--epoch_count', type=int, default=1, help='the starting epoch count, we save the model by <epoch_count>, <epoch_count>+<save_latest_freq>, ...')
         
         # parser.add_argument('--phase', type=str, default='train', help='name of dataset to load. e.g: train, val, test, etc')

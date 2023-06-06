@@ -41,7 +41,7 @@ class ShadowParamDataset(BaseDataset):
         B_path = os.path.join(self.dir_B, imname.replace('.jpg','.png')) 
         if not os.path.isfile(B_path):
             B_path = os.path.join(self.dir_B, imname)
-            print('MASK NOT FOUND : %s'%(B_path))
+            #print('MASK NOT FOUND : %s'%(B_path))
         
         A_img = Image.open(A_path).convert('RGB')        
         ow, oh = A_img.size[0], A_img.size[1]
