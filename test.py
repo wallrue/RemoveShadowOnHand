@@ -159,17 +159,17 @@ if __name__=='__main__':
     """
     test_options = TestOptions()
     dataset_dir = {"shadowparam": "C:\\Users\\lemin\\Downloads\\SYNTHETIC_HAND\\",
-                   "shadowsynthetic": "C:\\Users\\m1101\\Downloads\\NTUST_HS_Dataset\\"}
+                   "shadowsynthetic": "C:\\Users\\lemin\\Downloads\\SYNTHETIC_HAND\\"}
     checkpoints_dir = {"shadowparam": "C:\\Users\\m1101\\Downloads\\checkpoints",
-                       "shadowsynthetic": "C:\\Users\\m1101\\Downloads\\checkpoints"}
+                       "shadowsynthetic": "C:\\Users\\lemin\\Downloads\\checkpoints"}
 
-    testing_dict = [#["shadowsynthetic",   "STGAN",            [[2, 1], [2, 2]]], 
-                    ["shadowsynthetic",   "SIDSTGAN",         [[2, 1], [2, 2]]],
-                    #["shadowsynthetic",   "SIDPAMISTGAN",     [[2, 1], [2, 2]]], 
-                    #["shadowsynthetic",   "SIDPAMIwISTGAN",   [[2, 1], [2, 2]]], 
-                    #["shadowsynthetic",   "STGANwHand",       [[2, 1], [2, 2]]],
-                    #["shadowsynthetic",   "DSDSID",           [[], [2, 2]]],
-                    #["shadowsynthetic",   "MedSegDiff",       [[], [2, 2]]],
+    testing_dict = [["shadowsynthetic",   "STGAN",            [[0, 0], [1, 0]]], 
+                    ["shadowsynthetic",   "SIDSTGAN",         [[0, 0], [1, 0]]],
+                    ["shadowsynthetic",   "SIDPAMISTGAN",     [[0, 0], [1, 0]]], 
+                    ["shadowsynthetic",   "SIDPAMIwISTGAN",   [[0, 0], [1, 0]]], 
+                    ["shadowsynthetic",   "STGANwHand",       [[0, 0], [1, 0]]],
+                    ["shadowsynthetic",   "DSDSID",           [[], [1, 0]]],
+                    ["shadowsynthetic",   "MedSegDiff",       [[], [1, 0]]],
                     ]
         
     result_dir = os.getcwd() + "\\result_set\\"

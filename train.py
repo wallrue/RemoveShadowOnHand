@@ -176,9 +176,9 @@ if __name__=='__main__':
     """
     train_options = TrainOptions()
     dataset_dir = {"shadowparam": "C:\\Users\\lemin\\Downloads\\SYNTHETIC_HAND\\",
-                   "shadowsynthetic": "C:\\Users\\m1101\\Downloads\\SYNTHETIC_HAND\\"}
+                   "shadowsynthetic": "C:\\Users\\lemin\\Downloads\\SYNTHETIC_HAND\\"}
     checkpoints_dir = {"shadowparam": "C:\\Users\\m1101\\Downloads\\checkpoints",
-                       "shadowsynthetic": "C:\\Users\\m1101\\Downloads\\checkpoints"}
+                       "shadowsynthetic": "C:\\Users\\lemin\\Downloads\\checkpoints"}
     
     """ DEFINE EXPERIMENT """
     BACKBONE_TEST = False
@@ -195,13 +195,13 @@ if __name__=='__main__':
             training_dict = training_dict + training_list
     # Experient 2: Test the best backbone from experiment 1 in "shadowsynthetic" dataset
     else:
-        training_dict = [#["shadowsynthetic",   "STGAN",            [[2, 1], [2, 2]]], 
-                         ["shadowsynthetic",   "SIDSTGAN",         [[2, 1], [2, 2]]],
-                         #["shadowsynthetic",   "SIDPAMISTGAN",     [[2, 1], [2, 2]]], 
-                         #["shadowsynthetic",   "SIDPAMIwISTGAN",   [[2, 1], [2, 2]]], 
-                         #["shadowsynthetic",   "STGANwHand",       [[2, 1], [2, 2]]],
-                         #["shadowsynthetic",   "DSDSID",           [[], [2, 2]]],
-                         #["shadowsynthetic",   "MedSegDiff",       [[], [2, 2]]],
+        training_dict = [["shadowsynthetic",   "STGAN",            [[0, 0], [1, 0]]], 
+                         ["shadowsynthetic",   "SIDSTGAN",         [[0, 0], [1, 0]]],
+                         ["shadowsynthetic",   "SIDPAMISTGAN",     [[0, 0], [1, 0]]], 
+                         ["shadowsynthetic",   "SIDPAMIwISTGAN",   [[0, 0], [1, 0]]], 
+                         ["shadowsynthetic",   "STGANwHand",       [[0, 0], [1, 0]]],
+                         ["shadowsynthetic",   "DSDSID",           [[], [1, 0]]],
+                         ["shadowsynthetic",   "MedSegDiff",       [[], [1, 0]]],
                          ]
 
     """ RUN ONE """

@@ -53,23 +53,23 @@ class MedSegDiffModel(BaseModel):
         
     def forward(self):
         self.fake_shadowmask, self.fake_target = self.netG1(self.input_img, self.shadow_mask) # generally, self.fake_target = self.shadow_mask
-        self.fake_shadowmask = (self.fake_shadowmask>0).type(torch.float)*2-1
+        #self.fake_shadowmask = (self.fake_shadowmask>0).type(torch.float)*2-1
         
         self.shadow_param_pred, self.alpha_pred, self.fake_free_shadow_image = self.netG2(self.input_img, self.fake_shadowmask)
  
-    def backward1(self):
-        #self.loss_G1_L1 = self.MSELoss(self.fake_shadowmask, self.fake_target)
-        #self.loss_G1_L1.backward() 
-        self.netG1_module.backward()
+    def backward_G1(self):
+        self.loss_G1_L1 = self.MSELoss(self.fake_shadowmask, self.fake_target)
+        self.loss_G1_L1.backward(retain_graph=False)
+        #self.netG1_module.backward()
         
-    def backward2(self):
+    def backward_G2(self):
         lambda_ = 2
         self.shadow_param[:,[1,3,5]] = (self.shadow_param[:,[1,3,5]])/2 - 1.5
         self.loss_G2_param = self.criterionL1 (self.shadow_param_pred, self.shadow_param) * lambda_ 
         self.loss_G2_L1 = self.criterionL1 (self.fake_free_shadow_image, self.shadowfree_img) * lambda_
         self.loss_G2 = self.loss_G2_param + self.loss_G2_L1
         #self.loss_G = self.loss_G1 + self.loss_G2
-        self.loss_G2.backward() 
+        self.loss_G2.backward(retain_graph=True)
 
     def get_prediction(self, input_img):
         self.input_img = input_img.to(self.device)
@@ -86,20 +86,12 @@ class MedSegDiffModel(BaseModel):
         return  RES
     
     def optimize_parameters(self):
-        # self.forward()
- 
-        # self.optimizer_G.zero_grad()
-        # self.backward()
-        # self.optimizer_G.step()
-        
         self.forward()
         
-        #self.set_requires_grad([self.netG2_module.netG, self.netG2_module.netM], False)  # Enable backprop for D1, D2
-        self.optimizer_G1.zero_grad()
-        self.backward1()
-        self.optimizer_G1.step()
-        
-        #self.set_requires_grad([self.netG2_module.netG, self.netG2_module.netM], True)  # Enable backprop for D1, D2
         self.optimizer_G2.zero_grad()
-        self.backward2()
+        self.backward_G2()
         self.optimizer_G2.step()
+        
+        self.optimizer_G1.zero_grad()
+        self.backward_G1()
+        self.optimizer_G1.step()

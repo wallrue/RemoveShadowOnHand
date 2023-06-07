@@ -21,25 +21,25 @@ class DSDSIDModel(BaseModel):
     def initialize(self, opt):
         BaseModel.initialize(self, opt)
         self.isTrain = opt.isTrain
-        self.loss_names = ['G1_L1', 'G1DST1_L1', 'G1DST2_L1', 'G2_param', 'G2_L1']
-        self.model_names = {'G1', 'G2'}
         
         self.netG1 = define_DSD(opt)
         self.netG2 = define_SID(opt, net_g = opt.netS[opt.net2_id[0]], net_m = opt.netG[opt.net2_id[1]])
             
-        self.netG1_module = self.netG1.module if len(opt.gpu_ids) > 0 else self.netG1
-        self.netG2_module = self.netG2.module if len(opt.gpu_ids) > 0 else self.netG2
+        self.netG1 = self.netG1.module if len(opt.gpu_ids) > 0 else self.netG1
+        self.netG2 = self.netG2.module if len(opt.gpu_ids) > 0 else self.netG2
         
+        self.loss_names = ['G1_L1', 'G1DST1_L1', 'G1DST2_L1', 'G2_param', 'G2_L1']
+        self.model_names = {'G1', 'G2'}
         if self.isTrain:
             self.bce_logit = bce_logit_pred
             self.bce_logit_dst = bce_logit_dst
             self.criterionL1 = torch.nn.L1Loss().to(1) # Evaluation value 1 by L1Loss
             
             # Initialize optimizers
-            self.optimizer_G1 = torch.optim.Adam(self.netG1_module.parameters(),
+            self.optimizer_G1 = torch.optim.Adam(self.netG1.parameters(),
                                                 lr=opt.lr, betas=(opt.beta1, 0.999), weight_decay=1e-5)
-            self.optimizer_G2 = torch.optim.Adam([{'params': self.netG2_module.netG.parameters()},
-                                                  {'params': self.netG2_module.netM.parameters()}],
+            self.optimizer_G2 = torch.optim.Adam([{'params': self.netG2.netG.parameters()},
+                                                  {'params': self.netG2.netM.parameters()}],
                                                 lr=opt.lr, betas=(opt.beta1, 0.999), weight_decay=1e-5)
             self.optimizers = [self.optimizer_G1, self.optimizer_G2]
 
@@ -66,7 +66,7 @@ class DSDSIDModel(BaseModel):
 
         #self.nim = self.input_img.shape[1]
     
-    def forward1(self):
+    def forward(self):
         # Compute output of generator 1
         inputG1 = self.input_img
         self.fuse_pred_shad, self.pred_down1_shad, self.pred_down2_shad, self.pred_down3_shad, self.pred_down4_shad, \
@@ -76,10 +76,10 @@ class DSDSIDModel(BaseModel):
         
         # Compute output of generator 2
         self.fake_shadow_image = self.fuse_pred_shad
-        self.fake_shadow_image = (self.fake_shadow_image>0).type(torch.float)*2-1
+        #self.fake_shadow_image = (self.fake_shadow_image>0).type(torch.float)*2-1
         self.shadow_param_pred, self.alpha_pred, self.fake_free_shadow_image = self.netG2(self.input_img, self.fake_shadow_image)
 
-    def backward1(self):
+    def backward_G1(self):
         loss_fuse_shad = self.bce_logit(self.fuse_pred_shad, self.shadowmask_img, self.shadeless_inhand, self.handmask)
         loss1_shad = self.bce_logit(self.pred_down1_shad, self.shadowmask_img, self.shadeless_inhand, self.handmask)
         loss2_shad = self.bce_logit(self.pred_down2_shad, self.shadowmask_img, self.shadeless_inhand, self.handmask)
@@ -105,19 +105,19 @@ class DSDSIDModel(BaseModel):
         self.loss_G1DST1_L1 = loss_fuse_dst1 + loss1_dst1 + loss2_dst1 + loss3_dst1 + loss4_dst1 + loss0_dst1
         self.loss_G1DST2_L1 = loss_fuse_dst2 + loss1_dst2 + loss2_dst2 + loss3_dst2 + loss4_dst2 + loss0_dst2
         self.loss_G1 = self.loss_G1_L1 + 2*self.loss_G1DST1_L1 + 2*self.loss_G1DST2_L1
-        self.loss_G1.backward()
+        self.loss_G1.backward(retain_graph=False)
 
-    def backward2(self):
+    def backward_G2(self):
         lambda_ = 1
         self.shadow_param[:,[1,3,5]] = (self.shadow_param[:,[1,3,5]])/2 - 1.5
         self.loss_G2_param = self.criterionL1 (self.shadow_param_pred, self.shadow_param) * lambda_ 
         self.loss_G2_L1 = self.criterionL1 (self.fake_free_shadow_image, self.shadowfree_img) * lambda_
         self.loss_G2 = self.loss_G2_param + self.loss_G2_L1
-        self.loss_G2.backward()
+        self.loss_G2.backward(retain_graph=True)
         
     def get_prediction(self, input_img):
         self.input_img = input_img.to(self.device)
-        self.forward1()
+        self.forward()
 
         RES = dict()
         RES['final']= self.fake_free_shadow_image
@@ -127,15 +127,16 @@ class DSDSIDModel(BaseModel):
         return  RES
     
     def optimize_parameters(self):
-        self.forward1()
-        
-        self.set_requires_grad([self.netG2_module.netG, self.netG2_module.netM], False)  # Enable backprop for D1, D2
-        self.optimizer_G1.zero_grad()
-        self.backward1()
-        self.optimizer_G1.step()
-     
-        self.set_requires_grad([self.netG2_module.netG, self.netG2_module.netM], True)  # Enable backprop for D1, D2
+        self.forward()
+          
+        self.set_requires_grad([self.netG2.netG, self.netG2.netM], True)  # Enable backprop for D1, D2
         self.optimizer_G2.zero_grad()
-        self.backward2()
+        self.backward_G2()
         self.optimizer_G2.step()
+        
+        self.set_requires_grad([self.netG2.netG, self.netG2.netM], False)  # Enable backprop for D1, D2
+        self.optimizer_G1.zero_grad()
+        self.backward_G1()
+        self.optimizer_G1.step()
+
 

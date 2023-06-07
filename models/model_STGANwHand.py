@@ -52,22 +52,20 @@ class STGANwHandModel(BaseModel):
     def forward(self):
         # Compute output of generator 1
         inputSTGAN1 = self.input_img
-        self.fake_hand_mask = self.netSTGAN1_module.forward_G(inputSTGAN1)
+        self.fake_hand_mask = self.netSTGAN1.forward_G(inputSTGAN1)
         
         # Compute output of generator 2
-        self.fake_hand_mask = (self.fake_hand_mask > 0).type(torch.float)*2-1
         inputSTGAN2 = torch.cat((self.input_img, self.fake_hand_mask), 1)
-        self.fake_hand_img = self.netSTGAN2_module.forward_G(inputSTGAN2)
+        self.fake_hand_img = self.netSTGAN2.forward_G(inputSTGAN2)
 
     def forward_D(self):
-        """Calculate GAN loss for the discriminator"""
         fake_AB = torch.cat((self.input_img, self.fake_hand_mask), 1)
         real_AB = torch.cat((self.input_img, self.hand_mask), 1)                                                            
-        self.pred_fake, self.pred_real = self.netSTGAN1_module.forward_D(fake_AB.detach(), real_AB)
+        self.pred_fake, self.pred_real = self.netSTGAN1.forward_D(fake_AB.detach(), real_AB)
                                                             
         fake_ABC = torch.cat((self.input_img, self.fake_hand_mask, self.fake_hand_img), 1)
         real_ABC = torch.cat((self.input_img, self.hand_mask, self.hand_img), 1)                                                   
-        self.pred_fake2, self.pred_real2 = self.netSTGAN2_module.forward_D(fake_ABC.detach(), real_ABC)
+        self.pred_fake2, self.pred_real2 = self.netSTGAN2.forward_D(fake_ABC.detach(), real_ABC)
                                                             
     def backward_D(self):        
         self.loss_D1_fake = self.GAN_loss(self.pred_fake, target_is_real = 0) 
@@ -111,7 +109,6 @@ class STGANwHandModel(BaseModel):
         self.backward_D()
         self.optimizer_D.step()
 
-     
         self.set_requires_grad([self.netSTGAN1.netD, self.netSTGAN2.netD], False) # Freeze D
         self.forward_D()   
         

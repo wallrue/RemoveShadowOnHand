@@ -367,9 +367,9 @@ class MedSegDiffNet(nn.Module):
             
         return self.fake_target, self.target
     
-    def backward(self):
-        self.loss_G2_L1 = self.MSELoss(self.fake_target, self.target)
-        self.loss_G2_L1.backward()
+    # def backward(self):
+    #     self.loss_G2_L1 = self.MSELoss(self.fake_target, self.target)
+    #     self.loss_G2_L1.backward()
         
     @torch.no_grad()    
     def get_prediction(self, input_img):
