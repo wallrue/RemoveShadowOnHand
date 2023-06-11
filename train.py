@@ -175,21 +175,21 @@ if __name__=='__main__':
     Example of net_id: lisg of net_id is defined in base_options
     """
     train_options = TrainOptions()
-    dataset_dir = {"shadowparam": "C:\\Users\\lemin\\Downloads\\SYNTHETIC_HAND\\",
-                   "shadowsynthetic": "C:\\Users\\lemin\\Downloads\\SYNTHETIC_HAND\\"}
+    dataset_dir = {"shadowparam": "C:\\Users\\m1101\\Downloads\\Shadow_Removal\\SID\\_Git_SID\\data_processing\\dataset\\NTUST_HS\\",
+                   "shadowsynthetic": "C:\\Users\\m1101\\Downloads\\Shadow_Removal\\SID\\_Git_SID\\data_processing\\dataset\\SYNTHETIC_HAND\\"}
     checkpoints_dir = {"shadowparam": "C:\\Users\\m1101\\Downloads\\checkpoints",
-                       "shadowsynthetic": "C:\\Users\\lemin\\Downloads\\checkpoints"}
+                       "shadowsynthetic": "C:\\Users\\m1101\\Downloads\\checkpoints"}
     
     """ DEFINE EXPERIMENT """
-    BACKBONE_TEST = False
+    BACKBONE_TEST = True
     
     # Experient 1: Test the performance of backbones on "shadowparam" dataset
     if BACKBONE_TEST:
-        model_name_list = ["SIDPAMISTGAN", "SIDPAMIwISTGAN"]
+        model_name_list = ["SIDSTGAN", "SIDPAMISTGAN", "SIDPAMIwISTGAN"]
         training_dict = list()
         for model_name in model_name_list:
-            if model_name == "STGAN":        
-                training_list = [["shadowparam", model_name, [[i_netG, i_netD],[i_netG, i_netD]]] for i_netG in range(4) for i_netD in range(3)]
+            if model_name == "SIDSTGAN":        
+                training_list = [["shadowparam", model_name, [[i_netG, i_netD],[i_netS, i_netG]]] for i_netG in range(3,4) for i_netD in range(2,3) for i_netS in range(7)]
             else: 
                 training_list = [["shadowparam", model_name, [[i_netG, i_netD],[i_netS, i_netG]]] for i_netG in range(4) for i_netD in range(3) for i_netS in range(7)] 
             training_dict = training_dict + training_list

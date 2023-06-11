@@ -86,7 +86,7 @@ class SIDPAMIwISTGANModel(BaseModel):
         # Calculate gradients for G1----------------------                                       
         self.loss_G1_GAN = self.GAN_loss(self.pred_fake, target_is_real = 1)                                           
         self.loss_G1_L1 = self.criterionL1(self.fake_shadow_image, self.shadow_mask)
-        self.loss_G1 = self.loss_G1_L1*0.1 + self.loss_G1_GAN 
+        self.loss_G1 = self.loss_G1_L1*10 + self.loss_G1_GAN 
         self.loss_G1.backward(retain_graph=False)
         
     def backward_G2(self):
@@ -95,7 +95,7 @@ class SIDPAMIwISTGANModel(BaseModel):
         self.loss_G2_param = self.criterionL1(self.shadow_param_pred, self.shadow_param) * lambda_ 
         self.loss_G2_L1 = self.criterionL1(self.fake_free_shadow_image, self.shadowfree_img) * lambda_
         self.loss_G2_L1_I = self.criterionL1(self.fake_free_shadow_image_I,self.shadowfree_img) * lambda_
-        self.loss_G2 = self.loss_G2_param + self.loss_G2_L1 + self.loss_G2_L1_I
+        self.loss_G2 = self.loss_G2_param*10 + self.loss_G2_L1*10 + self.loss_G2_L1_I*10
         self.loss_G2.backward(retain_graph=True)
     
     def get_prediction(self, input_img):

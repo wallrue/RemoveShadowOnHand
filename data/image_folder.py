@@ -30,6 +30,9 @@ def make_dataset(dir):
                 path = os.path.join(root, fname)
                 images.append(path)
                 imname.append(fname)
+                
+                if len(images) > 400:
+                    break
     return images, imname
 
 def default_loader(path):

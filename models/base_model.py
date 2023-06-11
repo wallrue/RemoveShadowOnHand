@@ -97,7 +97,7 @@ class BaseModel():
             net = getattr(self, 'net' + model_name)
 
             if len(self.gpu_ids) > 0 and torch.cuda.is_available(): # The case for multiple GPUs
-                torch.save(net.module.cpu().state_dict(), save_path)
+                torch.save(net.cpu().state_dict(), save_path)
                 net.cuda(self.gpu_ids[0])
             else:
                 torch.save(net.cpu().state_dict(), save_path)

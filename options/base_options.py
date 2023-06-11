@@ -85,10 +85,10 @@ class BaseOptions():
         parser.set_defaults(checkpoints_dir=self.checkpoints_root + "\\checkpoints_" + self.model_name)
         
         # Training setup        
-        parser.set_defaults(gpu_ids='-1')
+        parser.set_defaults(gpu_ids='0')
         parser.set_defaults(phase='train_')
         parser.set_defaults(lr=0.0002)
-        parser.set_defaults(save_epoch_freq=2)
+        parser.set_defaults(save_epoch_freq=20)
 
         args, unknown = parser.parse_known_args()
         return args

@@ -108,11 +108,10 @@ class DSDSIDModel(BaseModel):
         self.loss_G1.backward(retain_graph=False)
 
     def backward_G2(self):
-        lambda_ = 1
         self.shadow_param[:,[1,3,5]] = (self.shadow_param[:,[1,3,5]])/2 - 1.5
-        self.loss_G2_param = self.criterionL1 (self.shadow_param_pred, self.shadow_param) * lambda_ 
-        self.loss_G2_L1 = self.criterionL1 (self.fake_free_shadow_image, self.shadowfree_img) * lambda_
-        self.loss_G2 = self.loss_G2_param + self.loss_G2_L1
+        self.loss_G2_param = self.criterionL1 (self.shadow_param_pred, self.shadow_param)
+        self.loss_G2_L1 = self.criterionL1 (self.fake_free_shadow_image, self.shadowfree_img)
+        self.loss_G2 = self.loss_G2_param*10 + self.loss_G2_L1*10
         self.loss_G2.backward(retain_graph=True)
         
     def get_prediction(self, input_img):

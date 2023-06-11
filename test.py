@@ -158,10 +158,10 @@ if __name__=='__main__':
     Example of modelname: DSDSID, SIDSTGAN, STGAN
     """
     test_options = TestOptions()
-    dataset_dir = {"shadowparam": "C:\\Users\\lemin\\Downloads\\SYNTHETIC_HAND\\",
-                   "shadowsynthetic": "C:\\Users\\lemin\\Downloads\\SYNTHETIC_HAND\\"}
+    dataset_dir = {"shadowparam": "C:\\Users\\m1101\\Downloads\\SYNTHETIC_HAND\\",
+                   "shadowsynthetic": "C:\\Users\\m1101\\Downloads\\SYNTHETIC_HAND\\"}
     checkpoints_dir = {"shadowparam": "C:\\Users\\m1101\\Downloads\\checkpoints",
-                       "shadowsynthetic": "C:\\Users\\lemin\\Downloads\\checkpoints"}
+                       "shadowsynthetic": "C:\\Users\\m1101\\Downloads\\checkpoints"}
 
     testing_dict = [["shadowsynthetic",   "STGAN",            [[0, 0], [1, 0]]], 
                     ["shadowsynthetic",   "SIDSTGAN",         [[0, 0], [1, 0]]],

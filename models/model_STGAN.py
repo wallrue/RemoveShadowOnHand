@@ -80,20 +80,20 @@ class STGANModel(BaseModel):
         
         self.loss_D1 = (self.loss_D1_fake + self.loss_D1_real)*0.1
         self.loss_D2 = (self.loss_D2_fake + self.loss_D2_real)*0.1
-        self.loss_D = self.loss_D1 + self.loss_D2*5
+        self.loss_D = self.loss_D1 + self.loss_D2*3
         self.loss_D.backward()
                                                             
     def backward_G1(self):
         self.loss_G1_GAN = self.GAN_loss(self.pred_fake, target_is_real = 1)                                           
         self.loss_G1_L1 = self.criterionL1(self.fake_shadow_image, self.shadow_mask)
-        self.loss_G1 = self.loss_G1_GAN + self.loss_G1_L1*0.1
+        self.loss_G1 = self.loss_G1_GAN + self.loss_G1_L1*10
         self.loss_G1.backward(retain_graph=False)
 
     def backward_G2(self):
         self.loss_G2_GAN = self.GAN_loss(self.pred_fake2, target_is_real = 1)       
         self.loss_G2_L1 = self.criterionL1(self.fake_free_shadow_image, self.shadowfree_img)
         
-        self.loss_G2 = self.loss_G2_GAN + self.loss_G2_L1*0.1
+        self.loss_G2 = self.loss_G2_GAN + self.loss_G2_L1*10
         self.loss_G2.backward(retain_graph=True)
 
     def get_prediction(self, input_img):
