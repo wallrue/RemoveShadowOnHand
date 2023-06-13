@@ -33,7 +33,6 @@ def progressbar(it, info_dict, size=60, out=sys.stdout):
     def show(j, batch_size):
         n = batch_size*j if batch_size*j < count else count
         x = int(size*n/count) 
-        
         taken_time = time.time() - info_dict["start time"]
         print("\r{} [{}{}] {}/{} | {:.3f} secs".format(info_dict["epoch"], "#"*x, "."*(size-x), n, count, taken_time), 
                 end='', file=out, flush=True) # Flushing for progressing bar in Python 3.0 
@@ -104,7 +103,7 @@ def loss_figure(loss_folder):
         i.grid(True)
     fig.savefig(os.path.join(loss_folder, 'loss_figure.png'), dpi=100)
     
-def train_loop(opt, dataset, model):
+def train_loop(opt, model): #dataset, model):
     """ This function is training execution plan for dataset, model
 
     Parameters:
@@ -113,6 +112,10 @@ def train_loop(opt, dataset, model):
     """
     cuda_tensor = torch.cuda.FloatTensor if len(opt.gpu_ids) > 0 else torch.FloatTensor
     for epoch in range(opt.epoch_count, opt.niter + opt.niter_decay + 1):
+        # Dataset loading
+        data_loader = CustomDatasetDataLoader(opt)
+        dataset = data_loader.load_data()
+        
         epoch_start_time = time.time()
         epoch_iter = 0
         t_comp, t_data = 0, 0
@@ -146,9 +149,6 @@ def train_loop(opt, dataset, model):
                 full_shadow_img = Variable(data['shadowfull'].type(cuda_tensor))
                 shadow_mask = Variable(data['shadowmask'].type(cuda_tensor))
                 shadowfree_img = Variable(data['shadowfree'].type(cuda_tensor))
-                
-                #hand_mask = Variable(data['handmask'].type(cuda_tensor))
-                #shadowfree_img = Variable(data['handimg'].type(cuda_tensor))
 
                 output = model.get_prediction(full_shadow_img)       
                 val_loss_phase1 += model.criterionL1(output['phase1'], shadow_mask) # Another loss (shadow detect, hand segment,...)
@@ -170,59 +170,62 @@ if __name__=='__main__':
     - dataset_dir: the root folder which contains dataset. {datasetname: path}
     - checkpoints_dir: the folder to save checkpoints after training. {datasetname: path}
     - training_dict: the model to be trained {datasetname: modelname}
-    Example of datasetname: shadowparam, shadowsynthetic, single
-    Example of modelname: STGAN, DSDSID, SIDSTGAN, SIDPAMISTGAN
+    Example of datasetname: shadowparam, rawsynthetic
+    Example of modelname: STGAN, SIDSTGAN, SIDPAMIwISTGAN, DSDSID, MedSegDiff
     Example of net_id: lisg of net_id is defined in base_options
     """
+    checkpoint_dir = os.getcwd() + "\\checkpoints\\"    
+    if not os.path.exists(checkpoint_dir):
+        os.mkdir(checkpoint_dir)
+    
     train_options = TrainOptions()
     dataset_dir = {"shadowparam": "C:\\Users\\lemin\\Downloads\\SYNTHETIC_HAND\\",
-                   "shadowsynthetic": "C:\\Users\\lemin\\Downloads\\SYNTHETIC_HAND\\"}
-    checkpoints_dir = {"shadowparam": "C:\\Users\\m1101\\Downloads\\checkpoints",
-                       "shadowsynthetic": "C:\\Users\\lemin\\Downloads\\checkpoints"}
+                   "rawsynthetic": "C:\\Users\\lemin\\Downloads\\data_creating\\"}
+    checkpoints_dir = {"shadowparam": checkpoint_dir,
+                       "rawsynthetic": checkpoint_dir}
     
     """ DEFINE EXPERIMENT """
     BACKBONE_TEST = False
     
     # Experient 1: Test the performance of backbones on "shadowparam" dataset
     if BACKBONE_TEST:
-        model_name_list = ["SIDPAMISTGAN", "SIDPAMIwISTGAN"]
+        model_name_list = ["STGAN"] #["SIDPAMISTGAN", "SIDPAMIwISTGAN"]
         training_dict = list()
         for model_name in model_name_list:
             if model_name == "STGAN":        
                 training_list = [["shadowparam", model_name, [[i_netG, i_netD],[i_netG, i_netD]]] for i_netG in range(4) for i_netD in range(3)]
             else: 
-                training_list = [["shadowparam", model_name, [[i_netG, i_netD],[i_netS, i_netG]]] for i_netG in range(4) for i_netD in range(3) for i_netS in range(7)] 
+                i_netG, i_netD = 0, 1 #The best result from testing "STGAN"
+                training_list = [["shadowparam", model_name, [[i_netG, i_netD],[i_netS, i_netG]]] for i_netS in range(7)] 
             training_dict = training_dict + training_list
     # Experient 2: Test the best backbone from experiment 1 in "shadowsynthetic" dataset
     else:
-        training_dict = [["shadowsynthetic",   "STGAN",            [[0, 0], [1, 0]]], 
-                         ["shadowsynthetic",   "SIDSTGAN",         [[0, 0], [1, 0]]],
-                         ["shadowsynthetic",   "SIDPAMISTGAN",     [[0, 0], [1, 0]]], 
-                         ["shadowsynthetic",   "SIDPAMIwISTGAN",   [[0, 0], [1, 0]]], 
-                         ["shadowsynthetic",   "STGANwHand",       [[0, 0], [1, 0]]],
-                         ["shadowsynthetic",   "DSDSID",           [[], [1, 0]]],
-                         ["shadowsynthetic",   "MedSegDiff",       [[], [1, 0]]],
-                         ]
+        training_dict =[["rawsynthetic",   "STGAN",            [[0, 0], [0, 0]]], 
+                        ["rawsynthetic",   "SIDSTGAN",         [[0, 0], [3, 0]]],
+                        ["rawsynthetic",   "SIDPAMIwISTGAN",   [[0, 0], [3, 0]]], 
+                        ["rawsynthetic",   "DSDSID",           [[], [3, 0]]],
+                        ["rawsynthetic",   "MedSegDiff",       [[], [3, 0]]]
+                        ]
 
-    """ RUN ONE """
+    """ RUN SECTION """
     for dataset_name, model_name, netid_list in training_dict:
         print('============== Start training: dataset {}, model {} =============='.format(model_name, dataset_name))  
-        train_options.net1_id, train_options.net2_id = netid_list  
+        train_options.net1_id, train_options.net2_id = netid_list  #backbone for STCGAN, SPM, SPMI Net which was tested above
         train_options.dataset_mode = dataset_name
         train_options.data_root = dataset_dir[dataset_name]
         train_options.checkpoints_root = checkpoints_dir[dataset_name]        
         train_options.model_name = model_name
         opt = train_options.parse()
-        opt.use_ycrcb = False
+        opt.use_skinmask = False
         
         # Dataset loading
-        data_loader = CustomDatasetDataLoader(opt)
-        dataset = data_loader.load_data()
+        #data_loader = CustomDatasetDataLoader(opt)
+        #dataset = data_loader.load_data()
 
         # Model defination
         model = create_model(opt)
         model.setup(opt)
 
         # Training
-        train_loop(opt, dataset, model)
+        train_loop(opt, model) #dataset, model)
         loss_figure(os.path.join(opt.checkpoints_dir, opt.name))

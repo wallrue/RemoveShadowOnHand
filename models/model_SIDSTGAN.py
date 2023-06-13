@@ -21,21 +21,22 @@ class SIDSTGANModel(BaseModel):
     def modify_commandline_options(parser, is_train=True):
         parser.set_defaults(norm='batch')
         parser.set_defaults(input_nc=3, output_nc=3)
+        parser.set_defaults(fineSize=256)
         return parser
 
     def initialize(self, opt):
         BaseModel.initialize(self, opt)
-        
+        self.opt = opt        
         self.isTrain = opt.isTrain
-        self.netG1 = network_STGAN.define_STGAN(opt, 3, 1, net_g = opt.netG[opt.net1_id[0]], net_d = opt.netD[opt.net1_id[1]])
+        self.loss_names = ['G1_GAN', 'G1_L1', 'D1_real', 'D1_fake', 
+                           'G2_param', 'G2_L1']
+        self.model_names = ['G1', 'G2']
+        self.netG1 = network_STGAN.define_STGAN(opt, 3 + self.opt.use_skinmask, 1, net_g = opt.netG[opt.net1_id[0]], net_d = opt.netD[opt.net1_id[1]])
         self.netG2 = define_SID(opt, net_g = opt.netS[opt.net2_id[0]], net_m = opt.netG[opt.net2_id[1]])
         
         self.netG1 = self.netG1.module if len(opt.gpu_ids) > 0 else self.netG1
         self.netG2 = self.netG2.module if len(opt.gpu_ids) > 0 else self.netG2
         
-        self.loss_names = ['G1_GAN', 'G1_L1', 'D1_real', 'D1_fake', 
-                           'G2_param', 'G2_L1']
-        self.model_names = ['G1', 'G2']
         if self.isTrain:
             # Define loss functions
             self.criterionL1 = torch.nn.L1Loss()
@@ -56,17 +57,19 @@ class SIDSTGANModel(BaseModel):
         self.shadow_mask = (input['shadowmask'].to(self.device) >0).type(torch.float)*2-1
         self.shadow_param = input['shadowparams'].to(self.device).type(torch.float)
         self.shadowfree_img = input['shadowfree'].to(self.device)
-    
+        self.skin_mask = (input['skinmask'].to(self.device) >0).type(torch.float)*2-1
+        
     def forward(self):
         # Compute output of generator 1
-        self.fake_shadow_image = self.netG1.forward_G(self.input_img)
+        self.inputNet1 = torch.cat((self.input_img, self.skin_mask), 1) if self.opt.use_skinmask else self.input_img
+        self.fake_shadow_image = self.netG1.forward_G(self.inputNet1)
         
         # Compute output of generator 2
         self.shadow_param_pred, self.alpha_pred, self.fake_free_shadow_image = self.netG2(self.input_img, self.fake_shadow_image)
                 
     def forward_D(self):
-        fake_AB = torch.cat((self.input_img, self.fake_shadow_image), 1)
-        real_AB = torch.cat((self.input_img, self.shadow_mask), 1)                                                            
+        fake_AB = torch.cat((self.inputNet1, self.fake_shadow_image), 1)
+        real_AB = torch.cat((self.inputNet1, self.shadow_mask), 1)                                                             
         self.pred_fake, self.pred_real = self.netG1.forward_D(fake_AB.detach(), real_AB)
         
     def backward_D(self):      

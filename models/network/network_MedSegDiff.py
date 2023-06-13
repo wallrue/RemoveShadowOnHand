@@ -1,4 +1,7 @@
-# -*- coding: utf-8 -*-
+###############################################################################
+# Original code from
+# https://github.com/lucidrains/med-seg-diff-pytorch/blob/main/med_seg_diff_pytorch/med_seg_diff_pytorch.py
+###############################################################################
 """
 Created on Tue May 30 18:34:11 2023
 
@@ -12,20 +15,11 @@ import torch.nn.functional as F
 from collections import namedtuple
 from tqdm import tqdm
 from functools import partial
-from einops import rearrange #, reduce
-
+from einops import rearrange
 from .network_GAN import ResUNet
 
 # constants
 ModelPrediction =  namedtuple('ModelPrediction', ['pred_noise', 'pred_x_start'])
-
-# normalization functions
-
-# def normalize_to_neg_one_to_one(img):
-#     return img * 2 - 1
-
-# def unnormalize_to_zero_to_one(t):
-#     return (t + 1) * 0.5
 
 def identity(t, *args, **kwargs):
     return t
@@ -38,7 +32,7 @@ def extract(a, t, x_shape):
 
 # beta schedule
 def linear_beta_schedule(timesteps):
-    #Default: 1000 steps in range [0.0001 to 0.01]*2 (forware, backward)
+    # Default: 1000 steps in range [0.0001 to 0.01]*2 (forware, backward)
     scale = 1000 / timesteps
     beta_start = scale * 0.0001
     beta_end = scale * 0.02
@@ -54,7 +48,6 @@ def cosine_beta_schedule(timesteps, s = 0.008):
     alphas_cumprod = torch.cos(((x / timesteps) + s) / (1 + s) * math.pi * 0.5) ** 2
     alphas_cumprod = alphas_cumprod / alphas_cumprod[0]     #Normalize to [1, .. , 0] - decrease
     betas = 1 - (alphas_cumprod[1:] / alphas_cumprod[:-1])  #Normalize to 1 - [a[1]/a[0], a[2]/ a[1], .. a[-1]/a[-2]]
-    #betas should be from [0, ..., 1]
     return torch.clip(betas, 0, 0.999)
 
 class MedSegDiffNet(nn.Module):
@@ -63,7 +56,7 @@ class MedSegDiffNet(nn.Module):
         self.image_size = opt.fineSize
         self.device = torch.device('cuda:{}'.format(opt.gpu_ids[0])) if len(opt.gpu_ids)>0 else torch.device('cpu')
 
-        self.netG = ResUNet(    dim = 32,
+        self.netG = ResUNet(    dim = 64,
                                 image_size = self.image_size,
                                 mask_channels = gan_output_nc,          # input image channels
                                 input_img_channels = gan_input_nc,      # input image channels
@@ -93,12 +86,9 @@ class MedSegDiffNet(nn.Module):
         self.num_timesteps = int(timesteps)
 
         # sampling related parameters
-        #sampling_timesteps = None
         self.sampling_timesteps = timesteps #default(sampling_timesteps, timesteps) # default num sampling timesteps to number of timesteps at training
         assert self.sampling_timesteps <= timesteps
-        #self.is_ddim_sampling = self.sampling_timesteps < timesteps
-        #self.ddim_sampling_eta = 1.
-        
+
         # helper function to register buffer from float64 to float32
         cuda_tensor = torch.FloatTensor if self.device == torch.device('cpu') else torch.cuda.FloatTensor
         register_buffer = lambda val: val.type(cuda_tensor) #.to(torch.float32).to(self.device)
@@ -112,53 +102,16 @@ class MedSegDiffNet(nn.Module):
         self.log_one_minus_alphas_cumprod = register_buffer(torch.log(1. - alphas_cumprod))
         self.sqrt_recip_alphas_cumprod = register_buffer(torch.sqrt(1. / alphas_cumprod))
         self.sqrt_recipm1_alphas_cumprod = register_buffer(torch.sqrt(1. / alphas_cumprod - 1))
-        
-        # register_buffer('betas', betas)
-        # register_buffer('alphas_cumprod', alphas_cumprod)
-        # register_buffer('alphas_cumprod_prev', alphas_cumprod_prev)
-
-        # # calculations for diffusion q(x_t | x_{t-1}) and others
-        # register_buffer('sqrt_alphas_cumprod', torch.sqrt(alphas_cumprod))
-        # register_buffer('sqrt_one_minus_alphas_cumprod', torch.sqrt(1. - alphas_cumprod))
-        # register_buffer('log_one_minus_alphas_cumprod', torch.log(1. - alphas_cumprod))
-        # register_buffer('sqrt_recip_alphas_cumprod', torch.sqrt(1. / alphas_cumprod))
-        # register_buffer('sqrt_recipm1_alphas_cumprod', torch.sqrt(1. / alphas_cumprod - 1))
 
         # calculations for posterior q(x_{t-1} | x_t, x_0)
-
         self.posterior_variance = betas * (1. - alphas_cumprod_prev) / (1. - alphas_cumprod)
         self.posterior_variance = register_buffer(self.posterior_variance)
 
         # below: log calculation clipped because the posterior variance is 0 at the beginning of the diffusion chain
-
         self.posterior_log_variance_clipped = register_buffer(torch.log(self.posterior_variance.clamp(min =1e-20)))
         self.posterior_mean_coef1 = register_buffer(betas * torch.sqrt(alphas_cumprod_prev) / (1. - alphas_cumprod))
         self.posterior_mean_coef2 = register_buffer((1. - alphas_cumprod_prev) * torch.sqrt(alphas) / (1. - alphas_cumprod))
 
-        # above: equal to 1. / (1. / (1. - alpha_cumprod_tm1) + alpha_t / beta_t)
-
-        # register_buffer('posterior_variance', posterior_variance)
-
-        # # below: log calculation clipped because the posterior variance is 0 at the beginning of the diffusion chain
-
-        # register_buffer('posterior_log_variance_clipped', torch.log(posterior_variance.clamp(min =1e-20)))
-        # register_buffer('posterior_mean_coef1', betas * torch.sqrt(alphas_cumprod_prev) / (1. - alphas_cumprod))
-        # register_buffer('posterior_mean_coef2', (1. - alphas_cumprod_prev) * torch.sqrt(alphas) / (1. - alphas_cumprod))
-            
-        # if opt.isTrain:
-        #     # Initialize optimizers
-        self.MSELoss = torch.nn.MSELoss()
-        #     self.optimizer_G = torch.optim.Adam(self.netG.parameters(),
-        #                                         lr=opt.lr, betas=(opt.beta1, 0.999), weight_decay=1e-5)
-        #     self.optimizers = [self.optimizer_G]
-            
-    # @property
-    # def device(self):
-    #     return next(self.parameters()).device
-
-    # noise: noise 
-    # image start (x0): result image
-    # v: v-parameterization as defined in appendix D of progressive distillation paper, used in imagen-video successfully
     def predict_start_from_noise(self, x_t, t, noise): #Predict result images (start) by xt, t and noise
         return (
             extract(self.sqrt_recip_alphas_cumprod, t, x_t.shape) * x_t -
@@ -180,7 +133,6 @@ class MedSegDiffNet(nn.Module):
     def model_predictions(self, x, t, c, x_self_cond = None, clip_x_start = False):
         """ Predict the pred_noise and pred_x_start
         """
-        #xt, t, c (original image), x_self_cond (other conditions), clip_denoised
         model_output = self.netG(x, t, c, x_self_cond)
         maybe_clip = partial(torch.clamp, min = -1., max = 1.) if clip_x_start else identity
 
@@ -204,9 +156,9 @@ class MedSegDiffNet(nn.Module):
 
     def q_posterior(self, x_start, x_t, t): 
         """ Compute the information of a noised image such as mean, variance, log_variance
+        Predict posterior_mean, posterior_variance, posterior_log_variance_clipped 
+        from result images (start), x_t and t
         """
-        #Predict posterior_mean, posterior_variance, posterior_log_variance_clipped 
-        #from result images (start), x_t and t
         posterior_mean = (
             extract(self.posterior_mean_coef1, t, x_t.shape) * x_start +
             extract(self.posterior_mean_coef2, t, x_t.shape) * x_t
@@ -217,9 +169,9 @@ class MedSegDiffNet(nn.Module):
     
     def p_mean_variance(self, x, t, c, x_self_cond = None, clip_denoised = True):
         """ Predict pred_x_start and compute the information of a pred_x_start
+        Predict model_mean, posterior_variance, posterior_log_variance, x_start
+        from xt, t, c (original image), x_self_cond (other conditions), clip_denoised
         """
-        #Predict model_mean, posterior_variance, posterior_log_variance, x_start
-        #from xt, t, c (original image), x_self_cond (other conditions), clip_denoised
         preds = self.model_predictions(x, t, c, x_self_cond) #result of pre-start prediction
         x_start = preds.pred_x_start
 
@@ -233,8 +185,6 @@ class MedSegDiffNet(nn.Module):
     def p_sample(self, x, t, c, x_self_cond = None, clip_denoised = True):
         """ Create prediction image from model_mean and model_log_variance
         """
-        #xt, t, c (original image), x_self_cond (other conditions), clip_denoised
-        #b, *_, device = *x.shape, x.device
         batched_times = torch.full((x.shape[0],), t, device = x.device, dtype = torch.long)
         model_mean, _, model_log_variance, x_start = self.p_mean_variance(x = x, t = batched_times, c = c, x_self_cond = x_self_cond, clip_denoised = clip_denoised)
         noise = torch.randn_like(x) if t > 0 else 0. # no noise if t == 0
@@ -243,10 +193,7 @@ class MedSegDiffNet(nn.Module):
 
     @torch.no_grad()
     def p_sample_loop(self, shape, cond):
-        #batch, device = shape[0], self.betas.device
-
         img = torch.randn(shape, device = self.betas.device)
-
         x_start = None
 
         for t in tqdm(reversed(range(0, self.num_timesteps)), desc = 'sampling loop time step', total = self.num_timesteps):
@@ -255,43 +202,6 @@ class MedSegDiffNet(nn.Module):
 
         img = (img+1)*0.5 #Normalize to [0, 1]
         return img
-
-    #@torch.no_grad()
-    # def ddim_sample(self, shape, cond_img, clip_denoised = True):
-    #     batch, device, total_timesteps, sampling_timesteps = shape[0], self.betas.device, self.num_timesteps, self.sampling_timesteps
-
-    #     times = torch.linspace(-1, total_timesteps - 1, steps=sampling_timesteps + 1)   # [-1, 0, 1, 2, ..., T-1] when sampling_timesteps == total_timesteps
-    #     times = list(reversed(times.int().tolist()))
-    #     time_pairs = list(zip(times[:-1], times[1:])) # [(T-1, T-2), (T-2, T-3), ..., (1, 0), (0, -1)]
-
-    #     img = torch.randn(shape, device = device)
-
-    #     x_start = None
-
-    #     for time, time_next in tqdm(time_pairs, desc = 'sampling loop time step'):
-    #         time_cond = torch.full((batch,), time, device=device, dtype=torch.long)
-    #         self_cond = x_start if self.self_condition else None
-    #         pred_noise, x_start, *_ = self.model_predictions(img, time_cond, cond_img, self_cond, clip_x_start = clip_denoised)
-
-    #         if time_next < 0:
-    #             img = x_start
-    #             continue
-
-    #         alpha = self.alphas_cumprod[time]
-    #         alpha_next = self.alphas_cumprod[time_next]
-
-    #         eta = 1.0
-    #         sigma = eta * ((1 - alpha / alpha_next) * (1 - alpha_next) / (1 - alpha)).sqrt()
-    #         c = (1 - alpha_next - sigma ** 2).sqrt()
-
-    #         noise = torch.randn_like(img)
-
-    #         img = x_start * alpha_next.sqrt() + \
-    #               c * pred_noise + \
-    #               sigma * noise
-
-    #     img = (img+1)*0.5 #Normalize to [0, 1]
-    #     return img
 
     @torch.no_grad()
     def sample(self, cond_img):
@@ -347,10 +257,10 @@ class MedSegDiffNet(nn.Module):
 
         x_self_cond = None
         if self.self_condition and random() < 0.5:
-            #with torch.no_grad():
-            # predicting x_0
-            x_self_cond = self.model_predictions(x, t, cond).pred_x_start
-            #x_self_cond.detach_()
+            with torch.no_grad():
+                # predicting x_0
+                x_self_cond = self.model_predictions(x, t, cond).pred_x_start
+                x_self_cond.detach_()
 
         # predict and take gradient step
         self.fake_target = self.netG(x, t, cond, x_self_cond)
@@ -364,19 +274,13 @@ class MedSegDiffNet(nn.Module):
             self.target = v
         else:
             raise ValueError(f'unknown objective {self.objective}')
-            
+        
         return self.fake_target, self.target
     
-    # def backward(self):
-    #     self.loss_G2_L1 = self.MSELoss(self.fake_target, self.target)
-    #     self.loss_G2_L1.backward()
-        
     @torch.no_grad()    
     def get_prediction(self, input_img):
         self.input_img = input_img
         self.pred_img = self.sample(self.input_img)     # pass in your unsegmented images
-        #self.pred.shape                              # predicted segmented images - (8, 3, 128, 128)
-        #self.forward()
         return self.pred_img
     
 def define_MedSegDiffNet(opt, gan_input_nc, gan_output_nc, timesteps = 1000):

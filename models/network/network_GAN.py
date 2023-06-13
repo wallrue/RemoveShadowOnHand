@@ -1,6 +1,6 @@
 ###############################################################################
 # This file contains definitions of GAN and some definitions of RESNET, UNET, 
-# UNET Mobile
+# UNET Mobile, ResUNet
 ###############################################################################
 import math
 import copy
@@ -99,7 +99,7 @@ def define_G(input_nc, output_nc, ngf, netG, norm='batch', use_dropout=False, in
     return init_net(net, init_type, init_gain, gpu_ids)
 
 def define_D(input_nc, ndf, netD,
-             n_layers_D=3, norm='batch', use_sigmoid=False, init_type='normal', init_gain=0.02, gpu_ids=[]):
+             n_layers_D=5, norm='batch', use_sigmoid=False, init_type='normal', init_gain=0.02, gpu_ids=[]):
     net = None
     norm_layer = get_norm_layer(norm_type=norm)
 
@@ -566,9 +566,6 @@ class MobileUNet(nn.Module):
 # Definitions of ResUNet
 ###############################################################################
 
-
-# helpers functions
-
 def exists(x):
     return x is not None
 
@@ -796,8 +793,6 @@ class Conditioning(nn.Module):
         # there is a downsample right after the Condition block (but maybe theres a better place to condition than right before the downsample)
 
         return self.block(c)
-
-# model
 
 @beartype
 class ResUNet(nn.Module):

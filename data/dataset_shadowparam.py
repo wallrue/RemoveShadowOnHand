@@ -23,7 +23,6 @@ class ShadowParamDataset(BaseDataset):
         self.dir_B = os.path.join(opt.dataroot, opt.phase + 'shadowmask')
         self.dir_C = os.path.join(opt.dataroot, opt.phase + 'shadowfree')
         self.dir_param = os.path.join(opt.dataroot, opt.phase + 'shadowparams')
-        #self.dir_matte = os.path.join(opt.dataroot, 'shadowmatte')
         
         self.A_paths, self.imname = make_dataset(self.dir_A)
         self.A_size = len(self.A_paths)
@@ -41,7 +40,6 @@ class ShadowParamDataset(BaseDataset):
         B_path = os.path.join(self.dir_B, imname.replace('.jpg','.png')) 
         if not os.path.isfile(B_path):
             B_path = os.path.join(self.dir_B, imname)
-            #print('MASK NOT FOUND : %s'%(B_path))
         
         A_img = Image.open(A_path).convert('RGB')        
         ow, oh = A_img.size[0], A_img.size[1]

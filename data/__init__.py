@@ -45,7 +45,7 @@ class CustomDatasetDataLoader():
 
     def __init__(self, opt):
         self.opt = opt
-        self.working_subset = 'main' #the kind of dataset to use ('main', 'valid')
+        self.working_subset = 'main'
         self.mainDataset, self.validDataset = train_val_split(create_dataset(opt), opt.validDataset_split)
         self.mainDataloader = torch.utils.data.DataLoader(
             self.mainDataset,
@@ -71,20 +71,3 @@ class CustomDatasetDataLoader():
             if i * self.opt.batch_size >= self.opt.max_dataset_size:
                 break
             yield data
-
-            
-# def train_val_split(dataset, val_split=0.25):
-#     train_idx, val_idx = train_test_split(list(range(len(dataset))), test_size=val_split)
-#     datasets = {}
-#     datasets['train'] = Subset(dataset, train_idx)
-#     datasets['val'] = Subset(dataset, val_idx)
-#     return datasets
-            
-# def CreateDataLoader(opt):
-#     data_loader = CustomDatasetDataLoader()
-#     data_loader.initialize(opt)
-#     return data_loader
-
-# def get_option_setter(dataset_name):
-#     dataset_class = find_dataset_using_name(dataset_name)
-#     return dataset_class.modify_commandline_options

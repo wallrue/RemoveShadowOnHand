@@ -29,7 +29,6 @@ class ShadowSyntheticDataset(BaseDataset):
         self.dir_handmask = os.path.join(opt.dataroot, opt.phase + 'handmask')
         self.dir_handshaded = os.path.join(opt.dataroot, opt.phase + 'handshaded')
         self.dir_handshadedless = os.path.join(opt.dataroot, opt.phase + 'handshadedless')
-        #self.dir_matte = os.path.join(opt.dataroot, 'shadowmatte')
         
         self.img_paths, self.imname = make_dataset(self.dir_shadowfull)
         self.img_size = len(self.img_paths)

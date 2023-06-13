@@ -31,7 +31,6 @@ class STGANNet(nn.Module):
       
 def define_STGAN(opt, gan_input_nc, gan_output_nc, net_g = 'unet_32', net_d = 'n_layers'):
     net = STGANNet(opt, gan_input_nc, gan_output_nc, net_g, net_d)
-    
     if len(opt.gpu_ids)>0:
         assert(torch.cuda.is_available())
         net.to(opt.gpu_ids[0])

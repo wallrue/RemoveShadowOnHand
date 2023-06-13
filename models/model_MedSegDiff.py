@@ -17,7 +17,8 @@ class MedSegDiffModel(BaseModel):
     def modify_commandline_options(parser, is_train=True):
         parser.set_defaults(norm='batch')
         parser.set_defaults(input_nc=3, output_nc=3)
-        #128 size of images for 8GB RAM
+        parser.set_defaults(fineSize=256)
+        # 128 size of images for 8GB RAM
         return parser
     
     def initialize(self, opt):
@@ -26,7 +27,7 @@ class MedSegDiffModel(BaseModel):
         self.loss_names = ['G1_L1', 'G2_param', 'G2_L1']
         self.model_names = ['G1', 'G2']
         
-        self.netG1 = define_MedSegDiffNet(opt, 3, 1, timesteps = 4)
+        self.netG1 = define_MedSegDiffNet(opt, 3, 1, timesteps = 100)
         self.netG2 = define_SID(opt, net_g = opt.netS[opt.net2_id[0]], net_m = opt.netG[opt.net2_id[1]])
         
         self.netG1_module = self.netG1.module if len(opt.gpu_ids) > 0 else self.netG1
@@ -35,8 +36,7 @@ class MedSegDiffModel(BaseModel):
         if self.isTrain:
             # Initialize optimizers
             self.MSELoss = torch.nn.MSELoss()
-            self.bce = torch.nn.BCEWithLogitsLoss().to(0) # Evaluation value 0 by BCEWithLogitsLoss
-            self.criterionL1 = torch.nn.L1Loss().to(1) # Evaluation value 1 by L1Loss'
+            self.criterionL1 = torch.nn.L1Loss()
             
             self.optimizer_G1 = torch.optim.Adam(self.netG1_module.netG.parameters(),
                                                 lr=opt.lr, betas=(opt.beta1, 0.999), weight_decay=1e-5)
@@ -52,15 +52,12 @@ class MedSegDiffModel(BaseModel):
         self.shadowfree_img = input['shadowfree'].to(self.device)
         
     def forward(self):
-        self.fake_shadowmask, self.fake_target = self.netG1(self.input_img, self.shadow_mask) # generally, self.fake_target = self.shadow_mask
-        #self.fake_shadowmask = (self.fake_shadowmask>0).type(torch.float)*2-1
-        
+        self.fake_shadowmask, self.fake_target = self.netG1(self.input_img, self.shadow_mask)
         self.shadow_param_pred, self.alpha_pred, self.fake_free_shadow_image = self.netG2(self.input_img, self.fake_shadowmask)
  
     def backward_G1(self):
         self.loss_G1_L1 = self.MSELoss(self.fake_shadowmask, self.fake_target)
         self.loss_G1_L1.backward(retain_graph=False)
-        #self.netG1_module.backward()
         
     def backward_G2(self):
         lambda_ = 2
@@ -68,21 +65,17 @@ class MedSegDiffModel(BaseModel):
         self.loss_G2_param = self.criterionL1 (self.shadow_param_pred, self.shadow_param) * lambda_ 
         self.loss_G2_L1 = self.criterionL1 (self.fake_free_shadow_image, self.shadowfree_img) * lambda_
         self.loss_G2 = self.loss_G2_param + self.loss_G2_L1
-        #self.loss_G = self.loss_G1 + self.loss_G2
         self.loss_G2.backward(retain_graph=True)
 
     def get_prediction(self, input_img):
         self.input_img = input_img.to(self.device)
         self.fake_shadowmask = self.netG1_module.get_prediction(self.input_img)
-        #self.fake_shadowmask = self.shadow_mask
         self.fake_shadowmask = (self.fake_shadowmask>0).type(torch.float)*2-1
         self.shadow_param_pred, self.alpha_pred, self.fake_free_shadow_image = self.netG2(self.input_img, self.fake_shadowmask)
  
         RES = dict()
-        RES['final']  = self.fake_free_shadow_image #util.tensor2im(self.final,scale =0)
-        RES['phase1'] = self.fake_shadowmask #util.tensor2im(self.out,scale =0)
-        #RES['param'] = self.shadow_param_pred.detach().cpu() 
-        #RES['matte'] = util.tensor2im(self.alpha_pred.detach().cpu()/2,scale =0)
+        RES['final']  = self.fake_free_shadow_image
+        RES['phase1'] = self.fake_shadowmask
         return  RES
     
     def optimize_parameters(self):

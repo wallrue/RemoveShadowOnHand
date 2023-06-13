@@ -48,21 +48,6 @@ class BaseOptions():
         parser.add_argument('--gpu_ids', type=str, default='0', help='gpu ids: e.g. 0  0,1,2, 0,2. use -1 for CPU')
         parser.add_argument('--init_type', type=str, default='xavier', help='network initialization [normal|xavier|kaiming|orthogonal]')
         parser.add_argument('--init_gain', type=float, default=0.02, help='scaling factor for normal, xavier and orthogonal.')
-        
-        #parser.add_argument('--model', type=str, help='chooses which model to use. cycle_gan, pix2pix, test')
-        #parser.add_argument('--netD', type=str, default='basic', help='selects model to use for netD')
-        #parser.add_argument('--netG', type=str, default='resnet_9blocks', help='selects model to use for netG')
-   
-        #parser.add_argument('--verbose', action='store_true', help='if specified, print more debugging information')       
-        #parser.add_argument('--lambda_GAN', type=float, default=0.0)
-        #parser.add_argument('--lambda_smooth', type=float, default=0.0)
-        #parser.add_argument('--n_layers_D', type=int, default=3, help='only used if netD==n_layers')
-        
-        #parser.add_argument('--direction', type=str, default='AtoB', help='AtoB or BtoA')
-        #parser.add_argument('--finetuning', action='store_true')
-        #parser.add_argument('--finetuning_name', type=str)
-        #parser.add_argument('--finetuning_epoch', type=str)
-        #parser.add_argument('--finetuning_dir', type=str)
 
         self.initialized = True
         return parser
@@ -74,7 +59,7 @@ class BaseOptions():
 
         # Data transform argument        
         parser.set_defaults(loadSize=256)
-        parser.set_defaults(fineSize=256)
+        #parser.set_defaults(fineSize=256) #fineSize is defined in each model file
 
         net_id_name = ""
         if len(self.net1_id) > 0 or len(self.net2_id) > 0:
@@ -106,12 +91,7 @@ class BaseOptions():
         model_option_setter = models.get_option_setter(self.model_name)
         parser = model_option_setter(self.parser_pre, self.isTrain)
         args = self.get_known(parser)
-
-        # Modify dataset-related parser options
-        # dataset_name = opt.dataset_mode
-        # dataset_option_setter = data.get_option_setter(dataset_name)
-        # parser = dataset_option_setter(parser, self.isTrain)
-        # args, unknown = parser.parse_known_args()
+        
         self.parser = parser
         return args
 
@@ -145,16 +125,6 @@ class BaseOptions():
             suffix = ('_' + opt.suffix.format(**vars(opt))) if opt.suffix != '' else ''
             opt.name = opt.name + suffix
         self.print_options(opt)
-
-        # Set gpu ids
-        # available_gpus = [torch.cuda.device(i) for i in range(torch.cuda.device_count())]
-        # str_ids = opt.gpu_ids.split(',')
-        # opt.gpu_ids = []
-        # if len(available_gpus) > 0: 
-        #     for str_id in str_ids:
-        #         id = int(str_id)
-        #         if id >= 0:
-        #             opt.gpu_ids.append(available_gpus[id])
  
         # Change gpu_ids from string_type to list_type
         str_ids = opt.gpu_ids.split(',')

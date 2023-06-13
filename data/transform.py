@@ -8,6 +8,8 @@ import numbers
 import torch
 import torchvision.transforms as transforms
 from PIL import Image, ImageOps
+import numpy as np
+import cv2
 
 def get_transform_list(opt):
     """The function for calling transform methods by command ('resize_and_crop', 
@@ -43,10 +45,39 @@ def get_transform_list(opt):
     transform_list += [transforms.ToTensor(),
                        transforms.Normalize(0.5, 0.5)]
     
-    if opt.use_ycrcb:
-        transform_list.append(RrgToYcrcb())
-    
     return transform_list
+
+def get_transform_for_synthetic(opt, dataset_name):
+    """The function for calling transform methods for raw synthetic dataset
+    """
+    imageSize = opt.fineSize
+    scale_ratio = random.random()*0.5
+
+    if dataset_name == 'handimg': 
+        transform_list = [Scale(imageSize + int(imageSize*scale_ratio)),
+                          RandomRotate(),
+                          CenterCrop(imageSize), 
+                          #RandomFlip(), 
+                          transforms.ToTensor(),
+                          transforms.Normalize(0.5, 0.5),
+                          enhance_hand()]
+    elif dataset_name == 'background': 
+        transform_list = [Scale(imageSize),
+                          transforms.ToTensor(),
+                          transforms.Normalize(0.5, 0.5)]
+    elif dataset_name == 'shadow': 
+        transform_list = [Scale(imageSize + int(imageSize*scale_ratio)),
+                          RandomRotate(),
+                          CenterCrop(imageSize), 
+                          transforms.ToTensor(),
+                          transforms.Normalize(0.5, 0.5),
+                          enhance_shadow()]
+    else:
+        raise ValueError('--dataset_name does not exist')
+        
+    return transform_list
+
+
 
 class RandomCrop(object):
     """Crops the given PIL.Image at a random location to have a region of
@@ -71,6 +102,31 @@ class RandomCrop(object):
             y1 =  random.randint(0,max(0,h-th-1))
             output = img.crop((x1, y1, x1 + tw, y1 + th))
         return output
+    
+class CenterCrop(object):
+    """Crops the given PIL.Image at the center to have a region of
+    the given size. size can be a tuple (target_height, target_width)
+    or an integer, in which case the target will be of a square shape (size, size)
+    """
+
+    def __init__(self, size):
+        if isinstance(size, numbers.Number):
+            self.size = (int(size), int(size))
+        else:
+            self.size = size
+
+    def __call__(self, img):
+        (w, h) = img.size
+        (th, tw) = self.size
+        x1 = int(round((w - tw) / 2.))
+        y1 = int(round((h - th) / 2.))
+        return img.crop((x1, y1, x1 + tw, y1 + th))
+    
+class RandomRotate(object):
+    """Randomly horizontally flips the given PIL.Image with a probability of 0.5
+    """
+    def __call__(self, img):
+        return img.rotate(random.random() * 360, Image.Resampling.NEAREST, expand=1, fillcolor=(255, 255, 255))
     
 class Resize(object):
     """Rescales the input PIL.Image to the given 'size'.
@@ -136,30 +192,43 @@ class Normalize(object):
     def __init__(self, mean, std):
         self.mean = mean
         self.std = std
-
+        
     def __call__(self, tensor):
         tensor = (tensor - self.mean)/self.std
-        return tensor
-    
-class RrgToYcrcb(object):
-    """Given mean: (R, G, B) and std: (R, G, B),
-    will normalize each channel of the torch.*Tensor, i.e.
-    channel = (channel - mean) / std
-    """
+        return tensor  
+  
+## Functions for synthetic dataset
 
-    def __init__(self, scale_params = 1.0):
-        self.scale_params = scale_params
+def get_binary(img):  # input dim = 4
+    img = (img.clone() + 1.0) / 2.0 
+    r = img[0]*255.0
+    g = img[1]*255.0
+    b = img[2]*255.0
 
-    def __call__(self, tensor): #tensor (3 channels) in range [0, 1]
-        if tensor.shape[0] == 3:
-            r = tensor[0,:,:]*255.0
-            g = tensor[1,:,:]*255.0
-            b = tensor[2,:,:]*255.0
-            
-            y = (.299*r + .587*g + .114*b)*self.scale_params
-            cb = (128 -.168736*r -.331364*g + .5*b)*self.scale_params
-            cr = (128 +.5*r - .418688*g - .081312*b)**self.scale_params
-            
-            tensor = torch.stack((y/255.0,cb/255.0,cr/255.0))
+    img_gray  = (.299*r + .587*g + .114*b)/255.
+    img_gray = np.uint8(img_gray.numpy() * 255.0)
     
-        return tensor
+    (ret2, th2) = cv2.threshold(img_gray, 230, 255, cv2.THRESH_BINARY) # + cv2.THRESH_OTSU)
+    th2 = cv2.bitwise_not(th2)
+    
+    out_temp = np.float32(th2) * 2.0 / 255.0 - 1.0
+    hand_shape = torch.tensor(out_temp)
+    return hand_shape
+
+class enhance_hand(object):
+    def __call__(self, imgs):
+        tensor = imgs
+        binar = get_binary(tensor.clone())
+        morph_size = 9
+        element = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2*morph_size + 1, 2*morph_size+1), (morph_size, morph_size))
+        hbinar = cv2.morphologyEx(binar.numpy(), cv2.MORPH_CLOSE, element)
+        return {'img': tensor,
+                'binary_normal': -binar[None, :, :], # Invert binary image
+                'binary_mask': torch.from_numpy(hbinar)[None, :, :] }
+    
+class enhance_shadow(object):
+    def __call__(self, imgs):
+        tensor = imgs
+        binar = -get_binary(tensor.clone())
+        enhance_shadow = cv2.GaussianBlur(binar.numpy(), (75,75), cv2.BORDER_DEFAULT)
+        return torch.from_numpy(enhance_shadow)[None, :, :]

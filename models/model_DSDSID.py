@@ -16,6 +16,7 @@ class DSDSIDModel(BaseModel):
     def modify_commandline_options(parser, is_train=True):
         parser.set_defaults(norm='batch')
         parser.set_defaults(input_nc=3, output_nc=3)
+        parser.set_defaults(fineSize=256)
         return parser
 
     def initialize(self, opt):
@@ -51,21 +52,16 @@ class DSDSIDModel(BaseModel):
     def set_input(self, input):
         self.input_img = input['shadowfull'].to(self.device)
         self.shadow_param = input['shadowparams'].to(self.device).type(torch.float)
-        self.shadowmask_img = input['handshaded'].to(self.device) #input['shadowmask'].to(self.device)
+        self.shadowmask_img = input['shadowmask'].to(self.device)
         self.shadowmask_img = (self.shadowmask_img > 0).type(torch.float)*2-1
         
-        #this will be subtracted out of predicted shadowmask: shadeless part on hand
-        self.shadeless_inhand = (input['handshadedless'].to(self.device) > 0).type(torch.float)*2-1
-        
         #this will be extracted at first: hand segmentation
-        self.handmask = (input['handmask'].to(self.device) > 0).type(torch.float)*2-1
+        self.handmask = self.shadowmask_img
+        self.shadeless_inhand = ((self.shadowmask_img > 0)*(self.handmask < 0)).type(torch.float)*2-1
         
         #create non-shadow on hand image 
-        handimg = input['handimg'].to(self.device) #Range [-1, 1]
-        self.shadowfree_img = input['shadowfull'].to(self.device) * (self.handmask < 0) + handimg  #input['shadowfree'].to(self.device)
+        self.shadowfree_img = input['shadowfree'].to(self.device)
 
-        #self.nim = self.input_img.shape[1]
-    
     def forward(self):
         # Compute output of generator 1
         inputG1 = self.input_img
@@ -76,7 +72,6 @@ class DSDSIDModel(BaseModel):
         
         # Compute output of generator 2
         self.fake_shadow_image = self.fuse_pred_shad
-        #self.fake_shadow_image = (self.fake_shadow_image>0).type(torch.float)*2-1
         self.shadow_param_pred, self.alpha_pred, self.fake_free_shadow_image = self.netG2(self.input_img, self.fake_shadow_image)
 
     def backward_G1(self):
@@ -122,8 +117,6 @@ class DSDSIDModel(BaseModel):
         RES = dict()
         RES['final']= self.fake_free_shadow_image
         RES['phase1'] = self.fake_shadow_image
-        #RES['param']= self.shadow_param_pred.detach().cpu() 
-        #RES['matte'] = util.tensor2im(self.alpha_pred.detach().cpu()/2,scale =0)
         return  RES
     
     def optimize_parameters(self):

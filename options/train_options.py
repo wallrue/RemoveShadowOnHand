@@ -27,18 +27,9 @@ class TrainOptions(BaseOptions):
         parser.add_argument('--lr_policy', type=str, default='lambda', help='learning rate policy: lambda|step|plateau|cosine')
         
         # Training process configuration
-        parser.add_argument('--niter', type=int, default=5, help='# of iter at starting learning rate')
-        parser.add_argument('--niter_decay', type=int, default=5, help='# of iter to linearly decay learning rate to zero; p/s: lr increases at first, then be zero, then reduces')
+        parser.add_argument('--niter', type=int, default=2, help='# of iter at starting learning rate')
+        parser.add_argument('--niter_decay', type=int, default=2, help='# of iter to linearly decay learning rate to zero; p/s: lr increases at first, then be zero, then reduces')
         parser.add_argument('--epoch_count', type=int, default=1, help='the starting epoch count, we save the model by <epoch_count>, <epoch_count>+<save_latest_freq>, ...')
-        
-        # parser.add_argument('--phase', type=str, default='train', help='name of dataset to load. e.g: train, val, test, etc')
-        # parser.add_argument('--pool_size', type=int, default=50, help='the size of image buffer that stores previously generated images')
-        # parser.add_argument('--no_lsgan', action='store_true', help='do *not* use least square GAN, if false, use vanilla GAN')
-        # parser.add_argument('--lambda_L1', type=float, default=0.0)
-        # parser.add_argument('--randomSize', action='store_true', help='if specified, do not flip the images for data augmentation')
-        # parser.add_argument('--continue_train', action='store_true', help='continue training: load the latest model')
-        # parser.add_argument('--epoch_count', type=int, default=1, help='the starting epoch count, we save the model by <epoch_count>, <epoch_count>+<save_latest_freq>, ...')
-        # parser.add_argument('--lr_decay_iters', type=int, default=50, help='multiply by a gamma every lr_decay_iters iterations')
-        
+     
         self.isTrain = True
         return parser

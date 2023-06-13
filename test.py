@@ -18,6 +18,7 @@ from options.test_options import TestOptions
 from data import CustomDatasetDataLoader
 from models import create_model
 from models.loss_function import calculate_ssim, calculate_psnr
+os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE" #Fix error on computer
   
 def progressbar(it, info_dict, size=60, out=sys.stdout):
     """The function for displaying progress bar 
@@ -106,11 +107,10 @@ def evaluate(dataset, test_model, result_dir, folder_name):
         fake_shadowmask = prediction['phase1']
         
         for i in range(len(real_shadowfull)):
-            # img_hand = (fake_shadowmask[i]>0.5)*real_shadowfull[i] #!
             img_shadowfull = real_shadowfull[i].permute(1, 2, 0)
-            img_shadowmask = real_shadowmask[i][0] #.permute(1, 2, 0)
+            img_shadowmask = real_shadowmask[i][0]
             img_shadowfree = real_shadowfree[i].permute(1, 2, 0)
-            pre_shadowmask = fake_shadowmask[i][0].data #.permute(1, 2, 0)
+            pre_shadowmask = fake_shadowmask[i][0].data
             pre_shadowfree = fake_shadowfree[i].data.permute(1, 2, 0)
 
             PNSR_dict["original"] += calculate_psnr(img_shadowfree, img_shadowfull)
@@ -136,14 +136,7 @@ def evaluate(dataset, test_model, result_dir, folder_name):
                         Image.fromarray(result_img).convert('RGB').resize((224, 224)).save(data_name)
                     elif len(np.shape(result_img)) == 2:
                         Image.fromarray(result_img).resize((224, 224)).save(data_name)
-                 
-            #my_img1 = ((img_hand.permute(1, 2, 0) + 1.0)*255.0/2.0).cpu().numpy().astype(np.uint8)
-            #my_img = ((pre_shadowmask + 1.0)*255.0/2.0).cpu().numpy().astype(np.uint8)
-            #pixel_value = [np.mean(my_img[:,:,0]), np.mean(my_img[:,:,1]), np.mean(my_img[:,:,2])]
-            #txt_string = str(int(pixel_value[0])) + "_" + str(int(pixel_value[1])) + "_" + str(int(pixel_value[2])) + "_" + str(int(pixel_value[1]  + pixel_value[2] + pixel_value[0]))
-            #Image.fromarray(my_img1).resize((224, 224)).save(result_dir + "//handmask_test" + f"\\{list_imgname[i][:-4]}" + "_" + txt_string + ".png")   
-            #Image.fromarray(my_img).resize((224, 224)).save(result_dir + "//mask_test" + f"\\{list_imgname[i]}")   
-    
+      
     length = len(dataset)
     PNSR_dict = {k: v / length for k, v in PNSR_dict.items()}
     SSIM_dict = {k: v / length for k, v in SSIM_dict.items()}
@@ -157,19 +150,21 @@ if __name__=='__main__':
     Example of datasetname: shadowparam, shadowsynthetic, single
     Example of modelname: DSDSID, SIDSTGAN, STGAN
     """
+    checkpoint_dir = os.getcwd() + "\\checkpoints\\"    
+    if not os.path.exists(checkpoint_dir):
+        os.mkdir(checkpoint_dir)
+    
     test_options = TestOptions()
     dataset_dir = {"shadowparam": "C:\\Users\\lemin\\Downloads\\SYNTHETIC_HAND\\",
-                   "shadowsynthetic": "C:\\Users\\lemin\\Downloads\\SYNTHETIC_HAND\\"}
-    checkpoints_dir = {"shadowparam": "C:\\Users\\m1101\\Downloads\\checkpoints",
-                       "shadowsynthetic": "C:\\Users\\lemin\\Downloads\\checkpoints"}
+                   "rawsynthetic": "C:\\Users\\lemin\\Downloads\\data_creating\\"}
+    checkpoints_dir = {"shadowparam": checkpoint_dir,
+                       "rawsynthetic": checkpoint_dir}
 
-    testing_dict = [["shadowsynthetic",   "STGAN",            [[0, 0], [1, 0]]], 
-                    ["shadowsynthetic",   "SIDSTGAN",         [[0, 0], [1, 0]]],
-                    ["shadowsynthetic",   "SIDPAMISTGAN",     [[0, 0], [1, 0]]], 
-                    ["shadowsynthetic",   "SIDPAMIwISTGAN",   [[0, 0], [1, 0]]], 
-                    ["shadowsynthetic",   "STGANwHand",       [[0, 0], [1, 0]]],
-                    ["shadowsynthetic",   "DSDSID",           [[], [1, 0]]],
-                    ["shadowsynthetic",   "MedSegDiff",       [[], [1, 0]]],
+    testing_dict = [["rawsynthetic",   "STGAN",            [[0, 1], [0, 1]]], 
+                    ["rawsynthetic",   "SIDSTGAN",         [[0, 1], [3, 0]]],
+                    ["rawsynthetic",   "SIDPAMIwISTGAN",   [[0, 1], [3, 0]]], 
+                    ["rawsynthetic",   "DSDSID",           [[], [3, 0]]],
+                    #["rawsynthetic",   "MedSegDiff",       [[], [3, 0]]]
                     ]
         
     result_dir = os.getcwd() + "\\result_set\\"
@@ -182,7 +177,7 @@ if __name__=='__main__':
         test_options.checkpoints_root = checkpoints_dir[dataset_name]          
         test_options.model_name = model_name
         opt = test_options.parse()
-        opt.use_ycrcb = False
+        opt.use_skinmask = False
         
         # Dataset loading       
         data_loader = CustomDatasetDataLoader(opt)
@@ -195,5 +190,3 @@ if __name__=='__main__':
         experiment_name = opt.name #"{}_{}".format(model_name, dataset_name)
         PNSR_score, SSIM_score, computing_time = evaluate(dataset, model, result_dir, experiment_name)
         print_current_losses(os.path.join(result_dir, 'valid.log'), experiment_name, {"PNSR_score": PNSR_score, "SSIM_score": SSIM_score}, computing_time)
-        
-        #dataset_dir[dataset_name] = "C:/Users/m1101/Downloads/Shadow_Removal/SID/_Git_SID/data_processing/dataset/NTUST_HS_Test/"
