@@ -110,6 +110,8 @@ def train_loop(opt, model): #dataset, model):
         dataset (string) -- dataset which is used for training
         model (string) -- model which is trained
     """
+    # data_loader = CustomDatasetDataLoader(opt)
+    # dataset = data_loader.load_data()
     cuda_tensor = torch.cuda.FloatTensor if len(opt.gpu_ids) > 0 else torch.FloatTensor
     for epoch in range(opt.epoch_count, opt.niter + opt.niter_decay + 1):
         # Dataset loading
@@ -142,24 +144,28 @@ def train_loop(opt, model): #dataset, model):
         
         # Validation section
         with torch.no_grad():
-            valid_losses, val_loss_phase1, n_valid_loss = 0, 0, 0
+            valid_losses, val_loss_phase1, n_valid_loss = 0, 0, 1 #0
             dataset.working_subset = "valid"
             assert len(dataset) > 0, "valid dataset is empty, please change opt.validDataset_split"
             for valid_id, data in enumerate(dataset, 0):
                 full_shadow_img = Variable(data['shadowfull'].type(cuda_tensor))
                 shadow_mask = Variable(data['shadowmask'].type(cuda_tensor))
                 shadowfree_img = Variable(data['shadowfree'].type(cuda_tensor))
-
-                output = model.get_prediction(full_shadow_img)       
+                skin_mask = (Variable(data['skinmask'].type(cuda_tensor)) >0)*2-1
+                
+                if opt.use_skinmask:
+                    output = model.get_prediction(full_shadow_img, skin_mask)   
+                else:
+                    output = model.get_prediction(full_shadow_img)    
+                    
                 val_loss_phase1 += model.criterionL1(output['phase1'], shadow_mask) # Another loss (shadow detect, hand segment,...)
                 valid_losses += model.criterionL1(output['final'], shadowfree_img)
-                n_valid_loss += 1
-                    
+                n_valid_loss += 1                   
             total_losses = {"valid_reconstruction": valid_losses/ n_valid_loss, 
                             "valid_phase1": val_loss_phase1/ n_valid_loss, **train_losses} #merging 2 dicts
             print_current_losses(os.path.join(opt.checkpoints_dir, opt.name, 'valid.log'), epoch, current_lr, \
                                  0, total_losses, -1.0, -1.0)
-            
+           
         # Saving model
         if epoch % opt.save_epoch_freq == 0:
             model.save_networks('latest')
@@ -179,8 +185,8 @@ if __name__=='__main__':
         os.mkdir(checkpoint_dir)
     
     train_options = TrainOptions()
-    dataset_dir = {"shadowparam": "C:\\Users\\lemin\\Downloads\\SYNTHETIC_HAND\\",
-                   "rawsynthetic": "C:\\Users\\lemin\\Downloads\\data_creating\\"}
+    dataset_dir = {"shadowparam": "C:\\Users\\m1101\\Downloads\\Shadow_Removal\\SID\\_Git_SID\\data_processing\\dataset\\NTUST_HS\\",
+                   "rawsynthetic": "C:\\Users\\m1101\\Downloads\\Shadow_Removal\\SID\\_Git_SID\\data_creating\\"}
     checkpoints_dir = {"shadowparam": checkpoint_dir,
                        "rawsynthetic": checkpoint_dir}
     
@@ -193,7 +199,7 @@ if __name__=='__main__':
         training_dict = list()
         for model_name in model_name_list:
             if model_name == "STGAN":        
-                training_list = [["shadowparam", model_name, [[i_netG, i_netD],[i_netG, i_netD]]] for i_netG in range(4) for i_netD in range(3)]
+                training_list = [["shadowparam", model_name, [[i_netG, i_netD],[i_netG, i_netD]]] for i_netG in range(4) for i_netD in range(2)]
             else: 
                 i_netG, i_netD = 0, 1 #The best result from testing "STGAN"
                 training_list = [["shadowparam", model_name, [[i_netG, i_netD],[i_netS, i_netG]]] for i_netS in range(7)] 
@@ -201,10 +207,10 @@ if __name__=='__main__':
     # Experient 2: Test the best backbone from experiment 1 in "shadowsynthetic" dataset
     else:
         training_dict =[["rawsynthetic",   "STGAN",            [[0, 0], [0, 0]]], 
-                        ["rawsynthetic",   "SIDSTGAN",         [[0, 0], [3, 0]]],
-                        ["rawsynthetic",   "SIDPAMIwISTGAN",   [[0, 0], [3, 0]]], 
-                        ["rawsynthetic",   "DSDSID",           [[], [3, 0]]],
-                        ["rawsynthetic",   "MedSegDiff",       [[], [3, 0]]]
+                        ["rawsynthetic",   "SIDSTGAN",         [[0, 0], [5, 0]]],
+                        ["rawsynthetic",   "SIDPAMIwISTGAN",   [[0, 0], [5, 0]]], 
+                        #["rawsynthetic",   "DSDSID",           [[], [5, 0]]],
+                        #["rawsynthetic",   "MedSegDiff",       [[], [5, 0]]]
                         ]
 
     """ RUN SECTION """
@@ -216,7 +222,11 @@ if __name__=='__main__':
         train_options.checkpoints_root = checkpoints_dir[dataset_name]        
         train_options.model_name = model_name
         opt = train_options.parse()
-        opt.use_skinmask = False
+        
+        opt.use_skinmask = True
+        if opt.use_skinmask:
+            opt.name = opt.name + "_HandSeg"
+        train_options.print_options(opt)
         
         # Dataset loading
         #data_loader = CustomDatasetDataLoader(opt)

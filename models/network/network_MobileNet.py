@@ -163,7 +163,7 @@ class MobileNetV2(nn.Module):
         return x
 
 ###############################################################################
-# Definitions of MobileNetV2
+# Definitions of MobileNetV3
 ############################################################################### 
 import math
 

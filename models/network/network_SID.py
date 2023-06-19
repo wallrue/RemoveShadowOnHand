@@ -21,10 +21,10 @@ class SIDNet(nn.Module):
                                       not opt.no_dropout, opt.init_type, opt.init_gain, [])
 
     def forward(self, input_img, fake_shadow_image):
-        self.input_img = input_img
-        self.fake_shadow_image = fake_shadow_image
+        self.input_img = F.interpolate(input_img,size=(256,256))
+        self.fake_shadow_image = F.interpolate(fake_shadow_image,size=(256,256))
         inputG = torch.cat([self.input_img, self.fake_shadow_image], 1)
-        inputG = F.interpolate(inputG,size=(256,256))
+        #inputG = F.interpolate(inputG,size=(256,256))
         # Compute output of generator 2
         self.shadow_param_pred = self.netG(inputG)
         

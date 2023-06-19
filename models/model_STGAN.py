@@ -18,7 +18,6 @@ class STGANModel(BaseModel):
     def modify_commandline_options(parser, is_train=True):
         parser.set_defaults(norm='batch')
         parser.set_defaults(input_nc=3, output_nc=3)
-        parser.set_defaults(fineSize=256)
         return parser
 
     def initialize(self, opt):
@@ -53,7 +52,7 @@ class STGANModel(BaseModel):
         self.input_img = input['shadowfull'].to(self.device)
         self.shadow_mask = (input['shadowmask'].to(self.device) >0).type(torch.float)*2-1
         self.shadowfree_img = input['shadowfree'].to(self.device)
-        self.skin_mask = (input['skinmask'].to(self.device) >0).type(torch.float)*2-1
+        self.skin_mask = (input['skinmask'].to(self.device) >0).type(torch.float)*2-1 if self.opt.use_skinmask else None
     
     def forward(self):
         # Compute output of generator 1
@@ -97,8 +96,9 @@ class STGANModel(BaseModel):
         self.loss_G2 = self.loss_G2_GAN + self.loss_G2_L1*0.1
         self.loss_G2.backward(retain_graph=True)
 
-    def get_prediction(self, input_img):
+    def get_prediction(self, input_img, skin_mask = None):
         self.input_img = input_img.to(self.device)
+        self.skin_mask = skin_mask.to(self.device)
         self.forward()
 
         RES = dict()

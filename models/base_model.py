@@ -62,7 +62,7 @@ class BaseModel():
             print(self.optimizers)
             self.schedulers = [self.get_scheduler(optimizer, opt) for optimizer in self.optimizers]
             
-        if not self.isTrain:
+        if (not self.isTrain) or (opt.continue_train):
             print("LOADING %s"%(self.name))
             self.load_networks(opt.epoch)
         self.print_networks(opt)
@@ -97,7 +97,7 @@ class BaseModel():
             net = getattr(self, 'net' + model_name)
 
             if len(self.gpu_ids) > 0 and torch.cuda.is_available(): # The case for multiple GPUs
-                torch.save(net.module.cpu().state_dict(), save_path)
+                torch.save(net.cpu().state_dict(), save_path)
                 net.cuda(self.gpu_ids[0])
             else:
                 torch.save(net.cpu().state_dict(), save_path)
@@ -120,9 +120,8 @@ class BaseModel():
 
             # The case for multiple GPUs
             net = getattr(self, 'net' + name)
-            if isinstance(net, torch.nn.DataParallel):
-                net = net.module
-              
+            #if isinstance(net, torch.nn.DataParallel):
+            #    net = net.module             
             # Loading state dict
             print('loading the model from %s' % load_path)
             state_dict = torch.load(load_path, map_location=str(self.device))
@@ -146,6 +145,7 @@ class BaseModel():
                     num_params += param.numel()
                 message += "{}\n".format(net)
                 message += "[Network {}] Total number of parameters : {:.3f} M\n".format(name, num_params / 1e6)
+        message += '-------GPU ids: {} -----------\n'.format(self.gpu_ids)
         message += '-----------------------------------------------'
         print(message)
 

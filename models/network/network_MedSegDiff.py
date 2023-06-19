@@ -53,7 +53,7 @@ def cosine_beta_schedule(timesteps, s = 0.008):
 class MedSegDiffNet(nn.Module):
     def __init__(self, opt, gan_input_nc, gan_output_nc, timesteps = 1000):
         super(MedSegDiffNet, self).__init__()
-        self.image_size = opt.fineSize
+        self.image_size = 64
         self.device = torch.device('cuda:{}'.format(opt.gpu_ids[0])) if len(opt.gpu_ids)>0 else torch.device('cpu')
 
         self.netG = ResUNet(    dim = 64,
@@ -227,7 +227,9 @@ class MedSegDiffNet(nn.Module):
         )
     
     def forward(self, input_img, output_img):
-        self.input_img, self.output_img = input_img, output_img
+        original_size = input_img.shape[2] #(b, c, h, w)
+        self.input_img = F.interpolate(input_img,size=(64,64))
+        self.output_img = F.interpolate(output_img,size=(64,64))
         if self.input_img.ndim == 3:
             self.input_img = rearrange(self.input_img, 'b h w -> b 1 h w')
 
@@ -275,17 +277,17 @@ class MedSegDiffNet(nn.Module):
         else:
             raise ValueError(f'unknown objective {self.objective}')
         
-        return self.fake_target, self.target
+        return F.interpolate(self.fake_target,size=(original_size, original_size)), F.interpolate(self.target,size=(original_size,original_size))
     
     @torch.no_grad()    
     def get_prediction(self, input_img):
-        self.input_img = input_img
+        original_size = input_img.shape[2] #(b, c, h, w )
+        self.input_img = F.interpolate(input_img, size=(64, 64))
         self.pred_img = self.sample(self.input_img)     # pass in your unsegmented images
-        return self.pred_img
+        return F.interpolate(self.pred_img, size=(original_size, original_size))
     
 def define_MedSegDiffNet(opt, gan_input_nc, gan_output_nc, timesteps = 1000):
     net = MedSegDiffNet(opt, gan_input_nc, gan_output_nc, timesteps)
-    
     if len(opt.gpu_ids)>0:
         assert(torch.cuda.is_available())
         net.to(opt.gpu_ids[0])

@@ -20,7 +20,7 @@ class BaseOptions():
         self.netG = ['unet_32','unet_128','unet_256','mobile_unet']
         self.netS = ['resnet_9blocks','resnet_6blocks','RESNEXT','mobilenetV1',
                      'mobilenetV2','mobilenetV3_large','mobilenetV3_small']
-        self.netD = ['basic','n_layers','pixel']
+        self.netD = ['n_layers','pixel']
         self.net1_id, self.net2_id = [], []
         
     def initialize(self, parser):
@@ -29,7 +29,7 @@ class BaseOptions():
         parser.add_argument('--dataset_mode', type=str, default='single', help='chooses kind of dataset loader. [single, shadowparam]')
         parser.add_argument('--suffix', default='', type=str, help='customized suffix: opt.name = opt.name + suffix: e.g., {model}_{netG}_size{loadSize}')        
         parser.add_argument('--num_threads', type=int, default=2, help='# threads for loading data, num_workers')
-        parser.add_argument('--batch_size', type=int, default=2, help='input batch size')
+        parser.add_argument('--batch_size', type=int, default=8, help='input batch size')
         
         # Data transform argument
         parser.add_argument('--loadSize', type=int, default=256, help='scale images to this size')
@@ -59,7 +59,7 @@ class BaseOptions():
 
         # Data transform argument        
         parser.set_defaults(loadSize=256)
-        #parser.set_defaults(fineSize=256) #fineSize is defined in each model file
+        parser.set_defaults(fineSize=256) #fineSize is defined in each model file
 
         net_id_name = ""
         if len(self.net1_id) > 0 or len(self.net2_id) > 0:
@@ -70,7 +70,7 @@ class BaseOptions():
         parser.set_defaults(checkpoints_dir=self.checkpoints_root + "\\checkpoints_" + self.model_name)
         
         # Training setup        
-        parser.set_defaults(gpu_ids='-1')
+        parser.set_defaults(gpu_ids='0')
         parser.set_defaults(phase='train_')
         parser.set_defaults(lr=0.0002)
         parser.set_defaults(save_epoch_freq=2)
@@ -124,7 +124,7 @@ class BaseOptions():
         if opt.suffix:
             suffix = ('_' + opt.suffix.format(**vars(opt))) if opt.suffix != '' else ''
             opt.name = opt.name + suffix
-        self.print_options(opt)
+        #self.print_options(opt)
  
         # Change gpu_ids from string_type to list_type
         str_ids = opt.gpu_ids.split(',')

@@ -157,14 +157,14 @@ class RawSyntheticDataset(BaseDataset):
 
         shadow_param = self.compute_params(full_shadow_img, shadow_img, full_hand_img)  
         skinmask = self.GetSkinMask(full_shadow_img)
-        if self.count < 5: # Save dataset to review
-            self.count += 1
-            cv2.imwrite("C:\\Users\\lemin\\Downloads\\image_test\\{}_full_shadow_img.png".format(index), cv2.cvtColor(np.uint8(full_shadow_img*255), cv2.COLOR_RGB2BGR))
-            cv2.imwrite("C:\\Users\\lemin\\Downloads\\image_test\\{}_shadow_img.png".format(index), np.uint8(shadow_img*255))
-            cv2.imwrite("C:\\Users\\lemin\\Downloads\\image_test\\{}_full_hand_img.png".format(index), cv2.cvtColor(np.uint8(full_hand_img*255), cv2.COLOR_RGB2BGR))
-            cv2.imwrite("C:\\Users\\lemin\\Downloads\\image_test\\{}_hand_img.png".format(index), cv2.cvtColor(np.uint8(hand_img*255), cv2.COLOR_RGB2BGR))
-            cv2.imwrite("C:\\Users\\lemin\\Downloads\\image_test\\{}_hand_mask.png".format(index), np.uint8(hand_mask*255))
-            cv2.imwrite("C:\\Users\\lemin\\Downloads\\image_test\\{}_skin_mask.png".format(index), np.uint8(skinmask*255))
+        # if self.count < 5: # Save dataset to review
+        #     self.count += 1
+        #     cv2.imwrite("C:\\Users\\m1101\\Downloads\\image_test\\{}_full_shadow_img.png".format(index), cv2.cvtColor(np.uint8(full_shadow_img*255), cv2.COLOR_RGB2BGR))
+        #     cv2.imwrite("C:\\Users\\m1101\\Downloads\\image_test\\{}_shadow_img.png".format(index), np.uint8(shadow_img*255))
+        #     cv2.imwrite("C:\\Users\\m1101\\Downloads\\image_test\\{}_full_hand_img.png".format(index), cv2.cvtColor(np.uint8(full_hand_img*255), cv2.COLOR_RGB2BGR))
+        #     cv2.imwrite("C:\\Users\\m1101\\Downloads\\image_test\\{}_hand_img.png".format(index), cv2.cvtColor(np.uint8(hand_img*255), cv2.COLOR_RGB2BGR))
+        #     cv2.imwrite("C:\\Users\\m1101\\Downloads\\image_test\\{}_hand_mask.png".format(index), np.uint8(hand_mask*255))
+        #     cv2.imwrite("C:\\Users\\m1101\\Downloads\\image_test\\{}_skin_mask.png".format(index), np.uint8(skinmask*255))
                         
         shadowfull_image = torch.from_numpy(full_shadow_img*2.0 -1.0)
         shadowmask_image = torch.from_numpy(shadow_img*2.0 -1.0)

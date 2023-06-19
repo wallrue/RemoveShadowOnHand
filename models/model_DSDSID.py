@@ -16,7 +16,6 @@ class DSDSIDModel(BaseModel):
     def modify_commandline_options(parser, is_train=True):
         parser.set_defaults(norm='batch')
         parser.set_defaults(input_nc=3, output_nc=3)
-        parser.set_defaults(fineSize=256)
         return parser
 
     def initialize(self, opt):
@@ -56,8 +55,10 @@ class DSDSIDModel(BaseModel):
         self.shadowmask_img = (self.shadowmask_img > 0).type(torch.float)*2-1
         
         #this will be extracted at first: hand segmentation
-        self.handmask = self.shadowmask_img
+        #self.handmask = self.shadowmask_img
+        self.handmask = (input['handmask'].to(self.device) > 0).type(torch.float)*2-1
         self.shadeless_inhand = ((self.shadowmask_img > 0)*(self.handmask < 0)).type(torch.float)*2-1
+        #self.handmask = self.shadowmask_img #Re-assign to dst1 (self.handmask was dst1's reference)
         
         #create non-shadow on hand image 
         self.shadowfree_img = input['shadowfree'].to(self.device)

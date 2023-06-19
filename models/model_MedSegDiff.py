@@ -17,7 +17,7 @@ class MedSegDiffModel(BaseModel):
     def modify_commandline_options(parser, is_train=True):
         parser.set_defaults(norm='batch')
         parser.set_defaults(input_nc=3, output_nc=3)
-        parser.set_defaults(fineSize=256)
+        #parser.set_defaults(fineSize=64)
         # 128 size of images for 8GB RAM
         return parser
     

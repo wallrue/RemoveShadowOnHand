@@ -2,6 +2,7 @@ ST-SID-Net_old.ipynb
 infer.py
 result_set/
 result_set_TU/
+checkpoints/
 .ipynb_checkpoints/
 **/.ipynb_checkpoints/
 **/__pycache__/
