@@ -155,13 +155,13 @@ if __name__=='__main__':
         os.mkdir(checkpoint_dir)
     
     test_options = TestOptions()
-    dataset_dir = {"shadowparam": "C:\\Users\\m1101\\Downloads\\NTUST_HS_Testset\\",
-                   "rawsynthetic": "C:\\Users\\m1101\\Downloads\\NTUST_HS_Testset\\"}
+    dataset_dir = {"shadowparam": "C:\\Users\\lemin\\Downloads\\NTUST_HS_Testset\\",
+                   "rawsynthetic": "C:\\Users\\lemin\\Downloads\\data_creating\\"}
     checkpoints_dir = {"shadowparam": checkpoint_dir,
                        "rawsynthetic": checkpoint_dir}
 
-    testing_dict =[ ["rawsynthetic",   "STGAN",            [[0, 0], [0, 0]]], 
-                    #["rawsynthetic",   "SIDSTGAN",         [[0, 0], [5, 0]]],
+    testing_dict =[ #["rawsynthetic",   "STGAN",            [[0, 0], [0, 0]]], 
+                    ["rawsynthetic",   "SIDSTGAN",         [[0, 0], [5, 0]]],
                     #["rawsynthetic",   "SIDPAMIwISTGAN",   [[0, 0], [5, 0]]], 
                     #["rawsynthetic",   "DSDSID",           [[], [5, 0]]],
                     #["rawsynthetic",   "MedSegDiff",       [[], [5, 0]]]
@@ -172,20 +172,16 @@ if __name__=='__main__':
     for dataset_name, model_name, netid_list in testing_dict:    
         print('============== Start testing: dataset {}, model {} =============='.format(model_name, dataset_name))
 
-        
         # Model defination   
         test_options.net1_id, test_options.net2_id = netid_list
         test_options.dataset_mode = dataset_name
         test_options.checkpoints_root = checkpoints_dir[dataset_name]        
         test_options.model_name = model_name
         opt = test_options.parse()
-        opt.use_skinmask = False
         model = create_model(opt)
         model.setup(opt)
         
-
-        # Dataset loading  
-        opt.dataset_mode = "shadowparam"
+        #opt.dataset_mode = "shadowparam" # Dataset loading -- for "shadowparam"
         opt.dataroot = dataset_dir[dataset_name]
         data_loader = CustomDatasetDataLoader(opt)
         dataset = data_loader.load_data()

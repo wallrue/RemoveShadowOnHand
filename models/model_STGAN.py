@@ -98,7 +98,7 @@ class STGANModel(BaseModel):
 
     def get_prediction(self, input_img, skin_mask = None):
         self.input_img = input_img.to(self.device)
-        self.skin_mask = skin_mask.to(self.device)
+        self.skin_mask = skin_mask.to(self.device) if skin_mask != None else skin_mask
         self.forward()
 
         RES = dict()

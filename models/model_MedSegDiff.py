@@ -30,18 +30,18 @@ class MedSegDiffModel(BaseModel):
         self.netG1 = define_MedSegDiffNet(opt, 3, 1, timesteps = 100)
         self.netG2 = define_SID(opt, net_g = opt.netS[opt.net2_id[0]], net_m = opt.netG[opt.net2_id[1]])
         
-        self.netG1_module = self.netG1.module if len(opt.gpu_ids) > 0 else self.netG1
-        self.netG2_module = self.netG2.module if len(opt.gpu_ids) > 0 else self.netG2
+        self.netG1 = self.netG1.module if len(opt.gpu_ids) > 0 else self.netG1
+        self.netG2 = self.netG2.module if len(opt.gpu_ids) > 0 else self.netG2
 
         if self.isTrain:
             # Initialize optimizers
             self.MSELoss = torch.nn.MSELoss()
             self.criterionL1 = torch.nn.L1Loss()
             
-            self.optimizer_G1 = torch.optim.Adam(self.netG1_module.netG.parameters(),
+            self.optimizer_G1 = torch.optim.Adam(self.netG1.netG.parameters(),
                                                 lr=opt.lr, betas=(opt.beta1, 0.999), weight_decay=1e-5)
-            self.optimizer_G2 = torch.optim.Adam([{'params': self.netG2_module.netG.parameters()},
-                                                  {'params': self.netG2_module.netM.parameters()}],
+            self.optimizer_G2 = torch.optim.Adam([{'params': self.netG2.netG.parameters()},
+                                                  {'params': self.netG2.netM.parameters()}],
                                                 lr=opt.lr, betas=(opt.beta1, 0.999), weight_decay=1e-5)
             self.optimizers = [self.optimizer_G1, self.optimizer_G2]
         
@@ -69,7 +69,7 @@ class MedSegDiffModel(BaseModel):
 
     def get_prediction(self, input_img):
         self.input_img = input_img.to(self.device)
-        self.fake_shadowmask = self.netG1_module.get_prediction(self.input_img)
+        self.fake_shadowmask = self.netG1.get_prediction(self.input_img)
         self.fake_shadowmask = (self.fake_shadowmask>0).type(torch.float)*2-1
         self.shadow_param_pred, self.alpha_pred, self.fake_free_shadow_image = self.netG2(self.input_img, self.fake_shadowmask)
  

@@ -181,7 +181,6 @@ class RawSyntheticDataset(BaseDataset):
         birdy['w'] = image_size[0]
         birdy['h'] = image_size[1]
 
-        shadow_param = [0,1,0,1,0,1]
         birdy['shadowparams'] = torch.FloatTensor(np.array(shadow_param))
         birdy['skinmask'] = torch.permute(skinmask_image, (2, 0, 1))
         birdy['imgname'] = "img_{}.png".format(index_img)

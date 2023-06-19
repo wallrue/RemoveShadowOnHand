@@ -185,10 +185,12 @@ if __name__=='__main__':
         os.mkdir(checkpoint_dir)
     
     train_options = TrainOptions()
-    dataset_dir = {"shadowparam": "C:\\Users\\m1101\\Downloads\\Shadow_Removal\\SID\\_Git_SID\\data_processing\\dataset\\NTUST_HS\\",
-                   "rawsynthetic": "C:\\Users\\m1101\\Downloads\\Shadow_Removal\\SID\\_Git_SID\\data_creating\\"}
+    dataset_dir = {"NTUST_HS": "C:\\Users\\lemin\\Downloads\\NTUST_HS_Testset",
+                   "shadowparam": "C:\\Users\\lemin\\Downloads\\Shadow_Removal\\SID\\_Git_SID\\data_processing\\dataset\\NTUST_HS\\",
+                   "rawsynthetic": "C:\\Users\\lemin\\Downloads\\data_creating\\"}
     checkpoints_dir = {"shadowparam": checkpoint_dir,
-                       "rawsynthetic": checkpoint_dir}
+                       "rawsynthetic": checkpoint_dir,
+                       "NTUST_HS": checkpoint_dir,}
     
     """ DEFINE EXPERIMENT """
     BACKBONE_TEST = False
@@ -206,11 +208,12 @@ if __name__=='__main__':
             training_dict = training_dict + training_list
     # Experient 2: Test the best backbone from experiment 1 in "shadowsynthetic" dataset
     else:
-        training_dict =[["rawsynthetic",   "STGAN",            [[0, 0], [0, 0]]], 
-                        ["rawsynthetic",   "SIDSTGAN",         [[0, 0], [5, 0]]],
-                        ["rawsynthetic",   "SIDPAMIwISTGAN",   [[0, 0], [5, 0]]], 
+        training_dict =[#["rawsynthetic",   "STGAN",            [[0, 0], [0, 0]]], 
+                        #["rawsynthetic",   "SIDSTGAN",         [[0, 0], [5, 0]]],
+                        #["rawsynthetic",   "SIDPAMIwISTGAN",   [[0, 0], [5, 0]]], 
                         #["rawsynthetic",   "DSDSID",           [[], [5, 0]]],
                         #["rawsynthetic",   "MedSegDiff",       [[], [5, 0]]]
+                        ["NTUST_HS",   "YCR",            [[0, 0], [0, 0]]], 
                         ]
 
     """ RUN SECTION """
@@ -223,7 +226,7 @@ if __name__=='__main__':
         train_options.model_name = model_name
         opt = train_options.parse()
         
-        opt.use_skinmask = True
+        #opt.use_skinmask = True
         if opt.use_skinmask:
             opt.name = opt.name + "_HandSeg"
         train_options.print_options(opt)

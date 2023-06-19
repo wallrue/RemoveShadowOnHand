@@ -45,7 +45,8 @@ class SIDPAMIwISTGANModel(BaseModel):
             self.optimizer_G1 = torch.optim.Adam(self.netG1.netG.parameters(),
                                                 lr=opt.lr, betas=(opt.beta1, 0.999), weight_decay=1e-5)
             self.optimizer_G2 = torch.optim.Adam([{'params': self.netG2.netG.parameters()},
-                                                  {'params': self.netG2.netM.parameters()}],
+                                                  {'params': self.netG2.netM.parameters()},
+                                                  {'params': self.netG2.netI.parameters()}],
                                                 lr=opt.lr, betas=(opt.beta1, 0.999), weight_decay=1e-5)
             self.optimizer_D = torch.optim.Adam(self.netG1.netD.parameters(),
                                                 lr=opt.lr, betas=(opt.beta1, 0.999), weight_decay=1e-5)
@@ -98,7 +99,7 @@ class SIDPAMIwISTGANModel(BaseModel):
     
     def get_prediction(self, input_img, skin_mask = None):
         self.input_img = input_img.to(self.device)
-        self.skin_mask = skin_mask.to(self.device)
+        self.skin_mask = skin_mask.to(self.device) if skin_mask != None else skin_mask
         self.forward()
 
         RES = dict()
