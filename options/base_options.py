@@ -29,7 +29,7 @@ class BaseOptions():
         parser.add_argument('--dataset_mode', type=str, default='single', help='chooses kind of dataset loader. [single, shadowparam]')
         parser.add_argument('--suffix', default='', type=str, help='customized suffix: opt.name = opt.name + suffix: e.g., {model}_{netG}_size{loadSize}')        
         parser.add_argument('--num_threads', type=int, default=2, help='# threads for loading data, num_workers')
-        parser.add_argument('--batch_size', type=int, default=8, help='input batch size')
+        parser.add_argument('--batch_size', type=int, default=16, help='input batch size')
         
         # Data transform argument
         parser.add_argument('--loadSize', type=int, default=256, help='scale images to this size')

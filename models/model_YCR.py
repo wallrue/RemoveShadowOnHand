@@ -27,7 +27,8 @@ class YCRModel(BaseModel):
         self.loss_names = ['G2_GAN', 'G2_L1', 'D2_real', 'D2_fake']
         self.model_names = ['YCR']
         
-        self.netYCR = network_STGAN.define_STGAN(opt, 3+2, 3, net_g = opt.netG[opt.net2_id[0]], net_d = opt.netD[opt.net2_id[1]])
+        input_nc = 5 if self.opt.use_skinmask else 3
+        self.netYCR = network_STGAN.define_STGAN(opt, input_nc, 3, net_g = opt.netG[opt.net2_id[0]], net_d = opt.netD[opt.net2_id[1]])
         self.netYCR = self.netYCR.module if len(opt.gpu_ids) > 0 else self.netYCR
         
         if self.isTrain:
@@ -48,7 +49,10 @@ class YCRModel(BaseModel):
         self.shadowfree_img = input['shadowfree'].to(self.device).type(torch.float)
         
     def forward(self):
-        self.inputnetYCR = torch.cat((self.input_img, self.input_img_Y, self.input_img_Cr), 1)
+        if self.opt.use_skinmask:
+            self.inputnetYCR = torch.cat((self.input_img, self.input_img_Y, self.input_img_Cr), 1)
+        else:
+            self.inputnetYCR = self.input_img
         self.fake_free_shadow_image = self.netYCR.forward_G(self.inputnetYCR)
 
     def forward_D(self):
@@ -57,21 +61,23 @@ class YCRModel(BaseModel):
         self.pred_fake, self.pred_real = self.netYCR.forward_D(fake_AB.detach(), real_AB)
         
     def backward_D(self):        
-        self.loss_D_fake = self.GAN_loss(self.pred_fake, target_is_real = 0) 
-        self.loss_D_real = self.GAN_loss(self.pred_real, target_is_real = 1)
+        self.loss_D2_fake = self.GAN_loss(self.pred_fake, target_is_real = 0) 
+        self.loss_D2_real = self.GAN_loss(self.pred_real, target_is_real = 1)
         
-        self.loss_D = self.loss_D_fake + self.loss_D_real
-        self.loss_D.backward()
+        self.loss_D2 = self.loss_D2_fake + self.loss_D2_real
+        self.loss_D2.backward()
                                                             
     def backward_G(self):
-        self.loss_G_GAN = self.GAN_loss(self.pred_fake, target_is_real = 1)       
-        self.loss_G_L1 = self.criterionL1(self.fake_free_shadow_image, self.shadowfree_img)
+        self.loss_G2_GAN = self.GAN_loss(self.pred_fake, target_is_real = 1)       
+        self.loss_G2_L1 = self.criterionL1(self.fake_free_shadow_image, self.shadowfree_img)
         
-        self.loss_G = self.loss_G_GAN + self.loss_G_L1*0.1
-        self.loss_G.backward()
+        self.loss_G2 = self.loss_G2_GAN + self.loss_G2_L1*0.1
+        self.loss_G2.backward()
 
-    def get_prediction(self, input_img):
+    def get_prediction(self, input_img, input_img_Y=None, input_img_Cr=None):
         self.input_img = input_img.to(self.device)
+        self.input_img_Y = input_img_Y.to(self.device) if input_img_Y!= None else input_img_Y
+        self.input_img_Cr = input_img_Cr.to(self.device) if input_img_Cr!= None else input_img_Cr
         self.forward()
 
         RES = dict()

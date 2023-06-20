@@ -144,23 +144,26 @@ def train_loop(opt, model): #dataset, model):
         
         # Validation section
         with torch.no_grad():
-            valid_losses, val_loss_phase1, n_valid_loss = 0, 0, 1 #0
-            dataset.working_subset = "valid"
-            assert len(dataset) > 0, "valid dataset is empty, please change opt.validDataset_split"
-            for valid_id, data in enumerate(dataset, 0):
-                full_shadow_img = Variable(data['shadowfull'].type(cuda_tensor))
-                shadow_mask = Variable(data['shadowmask'].type(cuda_tensor))
-                shadowfree_img = Variable(data['shadowfree'].type(cuda_tensor))
-                skin_mask = (Variable(data['skinmask'].type(cuda_tensor)) >0)*2-1
-                
-                if opt.use_skinmask:
-                    output = model.get_prediction(full_shadow_img, skin_mask)   
-                else:
-                    output = model.get_prediction(full_shadow_img)    
+            if opt.validDataset_split > 0.0:
+                valid_losses, val_loss_phase1, n_valid_loss = 0, 0, 0
+                dataset.working_subset = "valid"
+                assert len(dataset) > 0, "valid dataset is empty, please change opt.validDataset_split"
+                for valid_id, data in enumerate(dataset, 0):
+                    full_shadow_img = Variable(data['shadowfull'].type(cuda_tensor))
+                    shadow_mask = Variable(data['shadowmask'].type(cuda_tensor))
+                    shadowfree_img = Variable(data['shadowfree'].type(cuda_tensor))
+                    skin_mask = (Variable(data['skinmask'].type(cuda_tensor)) >0)*2-1
                     
-                val_loss_phase1 += model.criterionL1(output['phase1'], shadow_mask) # Another loss (shadow detect, hand segment,...)
-                valid_losses += model.criterionL1(output['final'], shadowfree_img)
-                n_valid_loss += 1                   
+                    if opt.use_skinmask:
+                        output = model.get_prediction(full_shadow_img, skin_mask)   
+                    else:
+                        output = model.get_prediction(full_shadow_img)    
+                        
+                    val_loss_phase1 += model.criterionL1(output['phase1'], shadow_mask) # Another loss (shadow detect, hand segment,...)
+                    valid_losses += model.criterionL1(output['final'], shadowfree_img)
+                    n_valid_loss += 1   
+            else:
+                valid_losses, val_loss_phase1, n_valid_loss = 0, 0, -1
             total_losses = {"valid_reconstruction": valid_losses/ n_valid_loss, 
                             "valid_phase1": val_loss_phase1/ n_valid_loss, **train_losses} #merging 2 dicts
             print_current_losses(os.path.join(opt.checkpoints_dir, opt.name, 'valid.log'), epoch, current_lr, \
@@ -185,12 +188,14 @@ if __name__=='__main__':
         os.mkdir(checkpoint_dir)
     
     train_options = TrainOptions()
-    dataset_dir = {"NTUST_HS": "C:\\Users\\lemin\\Downloads\\NTUST_HS_Testset",
-                   "shadowparam": "C:\\Users\\lemin\\Downloads\\Shadow_Removal\\SID\\_Git_SID\\data_processing\\dataset\\NTUST_HS\\",
-                   "rawsynthetic": "C:\\Users\\lemin\\Downloads\\data_creating\\"}
+    dataset_dir = {"NTUST_HS": "C:\\Users\\m1101\\Downloads\\NTUST_HS_Testset",
+                   "rawsynthetic": "C:\\Users\\m1101\\Downloads\\data_creating\\",
+                   "shadowparam": "C:\\Users\\lemin\\Downloads\\Shadow_Removal\\SID\\_Git_SID\\data_processing\\dataset\\NTUST_HS\\"
+                   }
     checkpoints_dir = {"shadowparam": checkpoint_dir,
                        "rawsynthetic": checkpoint_dir,
-                       "NTUST_HS": checkpoint_dir,}
+                       "NTUST_HS": checkpoint_dir
+                       }
     
     """ DEFINE EXPERIMENT """
     BACKBONE_TEST = False
@@ -209,11 +214,10 @@ if __name__=='__main__':
     # Experient 2: Test the best backbone from experiment 1 in "shadowsynthetic" dataset
     else:
         training_dict =[#["rawsynthetic",   "STGAN",            [[0, 0], [0, 0]]], 
-                        #["rawsynthetic",   "SIDSTGAN",         [[0, 0], [5, 0]]],
-                        #["rawsynthetic",   "SIDPAMIwISTGAN",   [[0, 0], [5, 0]]], 
+                        ["rawsynthetic",   "SIDSTGAN",         [[0, 0], [5, 0]]],
+                        ["rawsynthetic",   "SIDPAMIwISTGAN",   [[0, 0], [5, 0]]], 
                         #["rawsynthetic",   "DSDSID",           [[], [5, 0]]],
-                        #["rawsynthetic",   "MedSegDiff",       [[], [5, 0]]]
-                        ["NTUST_HS",   "YCR",            [[0, 0], [0, 0]]], 
+                        #["rawsynthetic",   "MedSegDiff",       [[], [5, 0]]] 
                         ]
 
     """ RUN SECTION """

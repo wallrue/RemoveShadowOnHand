@@ -155,20 +155,24 @@ if __name__=='__main__':
         os.mkdir(checkpoint_dir)
     
     test_options = TestOptions()
-    dataset_dir = {"shadowparam": "C:\\Users\\lemin\\Downloads\\NTUST_HS_Testset\\",
-                   "rawsynthetic": "C:\\Users\\lemin\\Downloads\\data_creating\\"}
-    checkpoints_dir = {"shadowparam": checkpoint_dir,
-                       "rawsynthetic": checkpoint_dir}
+    dataset_dir = {"NTUST_HS": "C:\\Users\\m1101\\Downloads\\NTUST_HS_Testset",
+                   "rawsynthetic": "C:\\Users\\m1101\\Downloads\\data_creating\\",
+                   "shadowparam": "C:\\Users\\lemin\\Downloads\\Shadow_Removal\\SID\\_Git_SID\\data_processing\\dataset\\NTUST_HS\\"
+                   }
+    checkpoints_dir = {"NTUST_HS": checkpoint_dir,
+                       "rawsynthetic": checkpoint_dir,
+                       "shadowparam": checkpoint_dir
+                       }
 
     testing_dict =[ #["rawsynthetic",   "STGAN",            [[0, 0], [0, 0]]], 
-                    ["rawsynthetic",   "SIDSTGAN",         [[0, 0], [5, 0]]],
+                    #["rawsynthetic",   "SIDSTGAN",         [[0, 0], [5, 0]]],
                     #["rawsynthetic",   "SIDPAMIwISTGAN",   [[0, 0], [5, 0]]], 
                     #["rawsynthetic",   "DSDSID",           [[], [5, 0]]],
-                    #["rawsynthetic",   "MedSegDiff",       [[], [5, 0]]]
+                    #["rawsynthetic",   "MedSegDiff",       [[], [5, 0]]] 
                     ]
         
     result_dir = os.getcwd() + "\\result_set\\"
-    
+    loading_one_time = True
     for dataset_name, model_name, netid_list in testing_dict:    
         print('============== Start testing: dataset {}, model {} =============='.format(model_name, dataset_name))
 
@@ -178,13 +182,19 @@ if __name__=='__main__':
         test_options.checkpoints_root = checkpoints_dir[dataset_name]        
         test_options.model_name = model_name
         opt = test_options.parse()
+        if opt.use_skinmask:
+            opt.name = opt.name + "_HandSeg"
+        test_options.print_options(opt)
+        
         model = create_model(opt)
         model.setup(opt)
         
-        #opt.dataset_mode = "shadowparam" # Dataset loading -- for "shadowparam"
-        opt.dataroot = dataset_dir[dataset_name]
-        data_loader = CustomDatasetDataLoader(opt)
-        dataset = data_loader.load_data()
+        if loading_one_time:
+            opt.dataset_mode = "NTUST_HS" # Dataset loading -- for "NTUST_HS"
+            opt.dataroot = dataset_dir[dataset_name]
+            data_loader = CustomDatasetDataLoader(opt)
+            dataset = data_loader.load_data()
+            loading_one_time = False
         
         experiment_name = opt.name #"{}_{}".format(model_name, dataset_name)
         PNSR_score, SSIM_score, computing_time = evaluate(dataset, model, result_dir, experiment_name)
