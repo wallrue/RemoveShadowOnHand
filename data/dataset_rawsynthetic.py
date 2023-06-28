@@ -27,14 +27,17 @@ class RawSyntheticDataset(BaseDataset):
         self.dir_shadowmask = os.path.join(opt.dataroot, 'shadow')
         self.dir_background = os.path.join(opt.dataroot, 'background\\val')
         self.dir_handimg = os.path.join(opt.dataroot, 'hands')
+        self.dir_handimg_ip = os.path.join(opt.dataroot, 'NTUST_IP')
         
         self.shadow_list = list(paths.list_images(self.dir_shadowmask))
         self.background_list = list(paths.list_images(self.dir_background))
         self.handimg_list = list(paths.list_images(self.dir_handimg))
+        self.handimg_ip_list = list(paths.list_images(self.dir_handimg_ip))
         
         random.shuffle(self.shadow_list)
         random.shuffle(self.background_list)
         random.shuffle(self.handimg_list)
+        random.shuffle(self.handimg_ip_list)
         
         self.transformData_handimg = transforms.Compose(get_transform_for_synthetic(self.opt, 'handimg'))
         self.transformData_background = transforms.Compose(get_transform_for_synthetic(self.opt, 'background'))
@@ -133,15 +136,26 @@ class RawSyntheticDataset(BaseDataset):
     def __getitem__(self, index):
         
         birdy = dict()
-        index_img = index % len(self.handimg_list)
-        handimg = self.transformData_handimg(Image.open(self.handimg_list[index_img]).convert("RGB"))
-        background = self.transformData_background(Image.open(self.background_list[index_img]).convert("RGB"))
         
-        background_img = (np.transpose(background.numpy(), (1,2,0)) + 1.0)/2.0 
-        hand_img = (np.transpose(handimg['img'].numpy(), (1,2,0)) + 1.0)/2.0
-        hand_norm = (np.transpose(handimg['binary_normal'].numpy(), (1,2,0)) + 1.0)/2.0
-        hand_mask = (np.transpose(handimg['binary_mask'].numpy(), (1,2,0)) + 1.0)/2.0
+        if index < len(self.handimg_ip_list):
+            index_img = index #- len(self.handimg_list)
+            background = self.transformData_background(Image.open(self.handimg_ip_list[index_img]).convert("RGB"))
+            background_img = (np.transpose(background.numpy(), (1,2,0)) + 1.0)/2.0 
+            hand_img = background_img
+            hand_norm = torch.ones((np.shape(background_img)[0], np.shape(background_img)[1], 1)).numpy()
+            hand_mask = torch.ones((np.shape(background_img)[0], np.shape(background_img)[1], 1)).numpy()
+        else:
+            #index_img = index % len(self.handimg_list)
+            index_img = index - len(self.handimg_ip_list)
+            handimg = self.transformData_handimg(Image.open(self.handimg_list[index_img]).convert("RGB"))
+            background = self.transformData_background(Image.open(self.background_list[index_img]).convert("RGB"))
+            
+            background_img = (np.transpose(background.numpy(), (1,2,0)) + 1.0)/2.0 
+            hand_img = (np.transpose(handimg['img'].numpy(), (1,2,0)) + 1.0)/2.0
+            hand_norm = (np.transpose(handimg['binary_normal'].numpy(), (1,2,0)) + 1.0)/2.0
+            hand_mask = (np.transpose(handimg['binary_mask'].numpy(), (1,2,0)) + 1.0)/2.0
 
+            
         # Create shadow mask on hand
         shadow_id = index_img % len(self.shadow_list)
         shadowimg = self.transformData_shadow(Image.open(self.shadow_list[shadow_id]).convert("RGB"))
@@ -210,7 +224,7 @@ class RawSyntheticDataset(BaseDataset):
         return global_mask
     
     def __len__(self):
-        return len(self.handimg_list)
+        return len(self.handimg_list) + len(self.handimg_ip_list)
     
     def load_img(self, img_path, size = (224, 224), img_mode = 'L'):
         if os.path.isfile(img_path):

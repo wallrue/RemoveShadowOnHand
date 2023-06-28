@@ -1,11 +1,11 @@
 #!/bin/bash
 #NOTE: Modify BACKBONE_TEST, training_dict, dataset_dir, checkpoints_dir in train.py to choose the type of experiment and models to train
 use_skinmask=false
-continue_train=false
-epoch_count_start=1
-epoch_checkpoint_load='lastest'
-niter=40
-niter_decay=40
+continue_train=true
+epoch_count_start=81
+epoch_checkpoint_load='80'
+niter=50
+niter_decay=50
 validDataset_split=0.0
 batch_size=8 #batch_size = 4 for DSD Net
 loadSize=256

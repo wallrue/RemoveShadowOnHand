@@ -12,6 +12,7 @@ import os
 import torch
 import numpy as np
 import time
+import cv2
 from PIL import Image
 from torch.autograd import Variable
 from options.test_options import TestOptions
@@ -64,7 +65,34 @@ def print_current_losses(log_dir, model, losses, t_comp):
     print(" - Result of testing : " + message)  # Print the message
     with open(log_dir, "a+") as log_file:
         log_file.write('%s\n' % message)  # Save the message
+
+def GetSkinMask(tensor_img): #Tensor (4 channels) in range [-1, 1]   
+    result_list = list()
+    for i in range(len(tensor_img)):
+        num_img = tensor_img[i].cpu()
+        num_img = (np.transpose(num_img, (1,2,0)) + 1.0)/2.0
+        img = np.uint8(num_img*255)
+    
+        # Skin color range for hsv color space 
+        img_HSV = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
+        HSV_mask = cv2.inRange(img_HSV, (0, 15, 0), (17,170,255)) 
+        HSV_mask = cv2.morphologyEx(HSV_mask, cv2.MORPH_OPEN, np.ones((9,9), np.uint8))
         
+        # Skin color range for hsv color space 
+        img_YCrCb = cv2.cvtColor(img, cv2.COLOR_RGB2YCrCb)
+        YCrCb_mask = cv2.inRange(img_YCrCb, (0, 135, 85), (255,180,135)) 
+        YCrCb_mask = cv2.morphologyEx(YCrCb_mask, cv2.MORPH_OPEN, np.ones((9,9), np.uint8))
+        
+        # Merge skin detection (YCbCr and hsv)
+        global_mask=cv2.bitwise_and(YCrCb_mask,HSV_mask)
+        global_mask=cv2.medianBlur(global_mask,3)
+        global_mask = cv2.dilate(global_mask, np.ones((9,9), np.uint8), iterations = 2)
+        
+        global_mask = np.expand_dims(global_mask/255, axis=2)
+        result_list.append(global_mask)
+    result = torch.from_numpy(np.array(result_list))
+    return result
+
 def evaluate(dataset, test_model, result_dir, folder_name):
     """The function is used for assessing the accuracy of test_model on dataset.
     
@@ -99,8 +127,13 @@ def evaluate(dataset, test_model, result_dir, folder_name):
         real_shadowmask = torch.reshape(real_shadowmask,(-1,1,256,256))
         real_shadowfree = torch.reshape(real_shadowfree,(-1,3,256,256))
         
-        testing_start_time = time.time()         
-        prediction = test_model.get_prediction(real_shadowfull)
+        testing_start_time = time.time()   
+        if not opt.use_skinmask:
+            prediction = test_model.get_prediction(real_shadowfull)
+        else:
+            skin_mask = (GetSkinMask(real_shadowfull) >0)*2-1
+            skin_mask = torch.reshape(skin_mask,(-1,1,256,256))
+            prediction = test_model.get_prediction(real_shadowfull, skin_mask)
         tcomp += time.time() - testing_start_time
                  
         fake_shadowfree = prediction['final']
@@ -156,46 +189,44 @@ if __name__=='__main__':
     
     test_options = TestOptions()
     dataset_dir = {"NTUST_HS": "C:\\Users\\m1101\\Downloads\\NTUST_HS_Testset",
-                   "rawsynthetic": "C:\\Users\\m1101\\Downloads\\data_creating\\",
-                   "shadowparam": "C:\\Users\\lemin\\Downloads\\Shadow_Removal\\SID\\_Git_SID\\data_processing\\dataset\\NTUST_HS\\"
+                   "rawsynthetic": "C:\\Users\\m1101\\Downloads\\SYNTHETIC_HAND", #"C:\\Users\\m1101\\Downloads\\data_creating\\",
+                   "shadowparam": "C:\\Users\\m1101\\Downloads\\NTUST_HS_Testset\\",
+                   "shadowsynthetic": "C:\\Users\\m1101\\Downloads\\SYNTHETIC_HAND",
                    }
     checkpoints_dir = {"NTUST_HS": checkpoint_dir,
                        "rawsynthetic": checkpoint_dir,
                        "shadowparam": checkpoint_dir
                        }
 
-    testing_dict =[ #["rawsynthetic",   "STGAN",            [[0, 0], [0, 0]]], 
-                    #["rawsynthetic",   "SIDSTGAN",         [[0, 0], [5, 0]]],
-                    #["rawsynthetic",   "SIDPAMIwISTGAN",   [[0, 0], [5, 0]]], 
+    testing_dict =[ ["rawsynthetic",   "STGAN",            [[0, 0], [0, 0]]], 
+                    ["rawsynthetic",   "SIDSTGAN",         [[0, 0], [5, 0]]],
+                    ["rawsynthetic",   "SIDPAMIwISTGAN",   [[0, 0], [5, 0]]],
                     #["rawsynthetic",   "DSDSID",           [[], [5, 0]]],
                     #["rawsynthetic",   "MedSegDiff",       [[], [5, 0]]] 
                     ]
         
     result_dir = os.getcwd() + "\\result_set\\"
-    loading_one_time = True
     for dataset_name, model_name, netid_list in testing_dict:    
         print('============== Start testing: dataset {}, model {} =============='.format(model_name, dataset_name))
-
         # Model defination   
         test_options.net1_id, test_options.net2_id = netid_list
         test_options.dataset_mode = dataset_name
         test_options.checkpoints_root = checkpoints_dir[dataset_name]        
         test_options.model_name = model_name
         opt = test_options.parse()
+        
         if opt.use_skinmask:
             opt.name = opt.name + "_HandSeg"
         test_options.print_options(opt)
         
         model = create_model(opt)
         model.setup(opt)
-        
-        if loading_one_time:
-            opt.dataset_mode = "NTUST_HS" # Dataset loading -- for "NTUST_HS"
-            opt.dataroot = dataset_dir[dataset_name]
-            data_loader = CustomDatasetDataLoader(opt)
-            dataset = data_loader.load_data()
-            loading_one_time = False
-        
+
+        opt.dataset_mode = "shadowsynthetic" # Dataset loading -- for "NTUST_HS"
+        opt.dataroot = dataset_dir[dataset_name]
+        data_loader = CustomDatasetDataLoader(opt)
+        dataset = data_loader.load_data()
+
         experiment_name = opt.name #"{}_{}".format(model_name, dataset_name)
         PNSR_score, SSIM_score, computing_time = evaluate(dataset, model, result_dir, experiment_name)
         print_current_losses(os.path.join(result_dir, 'valid.log'), experiment_name, {"PNSR_score": PNSR_score, "SSIM_score": SSIM_score}, computing_time)

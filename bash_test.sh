@@ -4,7 +4,7 @@ use_skinmask=true
 epoch_checkpoint_load='latest'
 loadSize=256
 fineSize=256
-batch_size=8
+batch_size=4
 gpu_ids=0
 
 CMD="python test.py \

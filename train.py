@@ -213,15 +213,20 @@ if __name__=='__main__':
             training_dict = training_dict + training_list
     # Experient 2: Test the best backbone from experiment 1 in "shadowsynthetic" dataset
     else:
-        training_dict =[#["rawsynthetic",   "STGAN",            [[0, 0], [0, 0]]], 
+        training_dict =[["rawsynthetic",   "STGAN",            [[0, 0], [0, 0]]], 
+                        ["rawsynthetic",   "SIDSTGAN",         [[0, 0], [5, 0]]],
+                        ["rawsynthetic",   "SIDPAMIwISTGAN",   [[0, 0], [5, 0]]],
+                        ["rawsynthetic",   "STGAN",            [[0, 0], [0, 0]]], 
                         ["rawsynthetic",   "SIDSTGAN",         [[0, 0], [5, 0]]],
                         ["rawsynthetic",   "SIDPAMIwISTGAN",   [[0, 0], [5, 0]]], 
                         #["rawsynthetic",   "DSDSID",           [[], [5, 0]]],
                         #["rawsynthetic",   "MedSegDiff",       [[], [5, 0]]] 
                         ]
 
+    count = 0
     """ RUN SECTION """
     for dataset_name, model_name, netid_list in training_dict:
+        count += 1
         print('============== Start training: dataset {}, model {} =============='.format(model_name, dataset_name))  
         train_options.net1_id, train_options.net2_id = netid_list  #backbone for STCGAN, SPM, SPMI Net which was tested above
         train_options.dataset_mode = dataset_name
@@ -231,7 +236,7 @@ if __name__=='__main__':
         opt = train_options.parse()
         
         #opt.use_skinmask = True
-        if opt.use_skinmask:
+        if count > 3: #opt.use_skinmask:
             opt.name = opt.name + "_HandSeg"
         train_options.print_options(opt)
         
