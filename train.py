@@ -110,8 +110,6 @@ def train_loop(opt, model): #dataset, model):
         dataset (string) -- dataset which is used for training
         model (string) -- model which is trained
     """
-    # data_loader = CustomDatasetDataLoader(opt)
-    # dataset = data_loader.load_data()
     cuda_tensor = torch.cuda.FloatTensor if len(opt.gpu_ids) > 0 else torch.FloatTensor
     for epoch in range(opt.epoch_count, opt.niter + opt.niter_decay + 1):
         # Dataset loading
@@ -183,18 +181,18 @@ if __name__=='__main__':
     Example of modelname: STGAN, SIDSTGAN, SIDPAMIwISTGAN, DSDSID, MedSegDiff
     Example of net_id: lisg of net_id is defined in base_options
     """
-    checkpoint_dir = os.getcwd() + "\\checkpoints\\"    
+    checkpoint_dir = os.getcwd() + "\\_checkpoints\\"    
     if not os.path.exists(checkpoint_dir):
         os.mkdir(checkpoint_dir)
     
     train_options = TrainOptions()
-    dataset_dir = {"NTUST_HS": "C:\\Users\\m1101\\Downloads\\NTUST_HS_Testset",
-                   "rawsynthetic": "C:\\Users\\m1101\\Downloads\\data_creating\\",
-                   "shadowparam": "C:\\Users\\lemin\\Downloads\\Shadow_Removal\\SID\\_Git_SID\\data_processing\\dataset\\NTUST_HS\\"
+    dataset_dir = {"rawsynthetic": os.getcwd() + "\\_database\\data_creating",
+                   "shadowparam": os.getcwd() + "\\_database\\NTUST_HS_SYNTHETIC",
+                   "shadowsynthetic": os.getcwd() + "\\_database\\SYNTHETIC_HAND",
                    }
-    checkpoints_dir = {"shadowparam": checkpoint_dir,
-                       "rawsynthetic": checkpoint_dir,
-                       "NTUST_HS": checkpoint_dir
+    checkpoints_dir = {"rawsynthetic": checkpoint_dir,
+                       "shadowparam": checkpoint_dir,
+                       "shadowsynthetic": checkpoint_dir
                        }
     
     """ DEFINE EXPERIMENT """
@@ -206,27 +204,43 @@ if __name__=='__main__':
         training_dict = list()
         for model_name in model_name_list:
             if model_name == "STGAN":        
-                training_list = [["shadowparam", model_name, [[i_netG, i_netD],[i_netG, i_netD]]] for i_netG in range(4) for i_netD in range(2)]
+                training_list = [["shadowparam", model_name, [[i_netG, i_netD],[i_netG, i_netD]], False] for i_netG in range(4) for i_netD in range(2)]
             else: 
                 i_netG, i_netD = 0, 1 #The best result from testing "STGAN"
-                training_list = [["shadowparam", model_name, [[i_netG, i_netD],[i_netS, i_netG]]] for i_netS in range(7)] 
+                training_list = [["shadowparam", model_name, [[i_netG, i_netD],[i_netS, i_netG]], False] for i_netS in range(7)] 
             training_dict = training_dict + training_list
     # Experient 2: Test the best backbone from experiment 1 in "shadowsynthetic" dataset
     else:
-        training_dict =[["rawsynthetic",   "STGAN",            [[0, 0], [0, 0]]], 
-                        ["rawsynthetic",   "SIDSTGAN",         [[0, 0], [5, 0]]],
-                        ["rawsynthetic",   "SIDPAMIwISTGAN",   [[0, 0], [5, 0]]],
-                        ["rawsynthetic",   "STGAN",            [[0, 0], [0, 0]]], 
-                        ["rawsynthetic",   "SIDSTGAN",         [[0, 0], [5, 0]]],
-                        ["rawsynthetic",   "SIDPAMIwISTGAN",   [[0, 0], [5, 0]]], 
-                        #["rawsynthetic",   "DSDSID",           [[], [5, 0]]],
-                        #["rawsynthetic",   "MedSegDiff",       [[], [5, 0]]] 
+        #training_dict = [[training_dataset, training_model, backbone, use_skinmask]]
+        training_dict =[["rawsynthetic",   "STGAN",            [[0, 0], [0, 0]], False],
+                        ["rawsynthetic",   "SIDSTGAN",         [[0, 0], [5, 0]], False],
+                        ["rawsynthetic",   "SIDPAMIwISTGAN",   [[0, 0], [5, 0]], False],
+                        ["rawsynthetic",   "STGAN",            [[0, 0], [0, 0]], True],
+                        ["rawsynthetic",   "SIDSTGAN",         [[0, 0], [5, 0]], True],
+                        ["rawsynthetic",   "SIDPAMIwISTGAN",   [[0, 0], [5, 0]], True],
+                        
+                        ["shadowparam",   "STGAN",            [[0, 0], [0, 0]], False],
+                        ["shadowparam",   "SIDSTGAN",         [[0, 0], [5, 0]], False],
+                        ["shadowparam",   "SIDPAMIwISTGAN",   [[0, 0], [5, 0]], False],
+                        ["shadowparam",   "STGAN",            [[0, 0], [0, 0]], True],
+                        ["shadowparam",   "SIDSTGAN",         [[0, 0], [5, 0]], True],
+                        ["shadowparam",   "SIDPAMIwISTGAN",   [[0, 0], [5, 0]], True],
+                        
+                        ["shadowsynthetic",   "STGAN",            [[0, 0], [0, 0]], False],
+                        ["shadowsynthetic",   "SIDSTGAN",         [[0, 0], [5, 0]], False],
+                        ["shadowsynthetic",   "SIDPAMIwISTGAN",   [[0, 0], [5, 0]], False],
+                        ["shadowsynthetic",   "STGAN",            [[0, 0], [0, 0]], True],
+                        ["shadowsynthetic",   "SIDSTGAN",         [[0, 0], [5, 0]], True],
+                        ["shadowsynthetic",   "SIDPAMIwISTGAN",   [[0, 0], [5, 0]], True],
+                        
+                        ["shadowsynthetic",   "DSDSID",           [[], [5, 0]], False],  # training DSD requires dataset having hand mask 
+                        ["shadowsynthetic",   "MedSegDiff",       [[], [5, 0]], False],
+                        ["rawsynthetic",   "DSDSID",           [[], [5, 0]], False], 
+                        ["rawsynthetic",   "MedSegDiff",       [[], [5, 0]], False],
                         ]
 
-    count = 0
     """ RUN SECTION """
-    for dataset_name, model_name, netid_list in training_dict:
-        count += 1
+    for dataset_name, model_name, netid_list, use_skinmask in training_dict:
         print('============== Start training: dataset {}, model {} =============='.format(model_name, dataset_name))  
         train_options.net1_id, train_options.net2_id = netid_list  #backbone for STCGAN, SPM, SPMI Net which was tested above
         train_options.dataset_mode = dataset_name
@@ -235,8 +249,8 @@ if __name__=='__main__':
         train_options.model_name = model_name
         opt = train_options.parse()
         
-        #opt.use_skinmask = True
-        if count > 3: #opt.use_skinmask:
+        opt.use_skinmask = use_skinmask
+        if opt.use_skinmask:
             opt.name = opt.name + "_HandSeg"
         train_options.print_options(opt)
         

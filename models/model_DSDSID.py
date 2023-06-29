@@ -58,8 +58,8 @@ class DSDSIDModel(BaseModel):
         #this will be extracted at first: hand segmentation
         #self.handmask = self.shadowmask_img
         self.handmask = (input['handmask'].to(self.device) > 0).type(torch.float)*2-1
-        self.shadeless_inhand = ((self.shadowmask_img < 0)*(self.handmask > 0)).type(torch.float)*2-1
-        self.handmask = self.shadowmask_img #Re-assign to dst2 (self.handmask was dst2's reference)
+        self.shadeless_inhand = ((self.shadowmask_img < 0)*(self.handmask > 0)).type(torch.float)*2-1 #Re-assign to dst1 (not shadow pixels easy to misinterpret)
+        self.shaded_inhand = self.handmask #Re-assign to dst2 (shadow pixels hard to detect)
         
         #create non-shadow on hand image 
         self.shadowfree_img = input['shadowfree'].to(self.device)
@@ -77,12 +77,12 @@ class DSDSIDModel(BaseModel):
         self.shadow_param_pred, self.alpha_pred, self.fake_free_shadow_image = self.netG2(self.input_img, self.fake_shadow_image)
 
     def backward_G1(self):
-        loss_fuse_shad = self.bce_logit(self.fuse_pred_shad, self.shadowmask_img, self.shadeless_inhand, self.handmask)
-        loss1_shad = self.bce_logit(self.pred_down1_shad, self.shadowmask_img, self.shadeless_inhand, self.handmask)
-        loss2_shad = self.bce_logit(self.pred_down2_shad, self.shadowmask_img, self.shadeless_inhand, self.handmask)
-        loss3_shad = self.bce_logit(self.pred_down3_shad, self.shadowmask_img, self.shadeless_inhand, self.handmask)
-        loss4_shad = self.bce_logit(self.pred_down4_shad, self.shadowmask_img, self.shadeless_inhand, self.handmask)
-        loss0_shad = self.bce_logit(self.pred_down0_shad, self.shadowmask_img, self.shadeless_inhand, self.handmask)
+        loss_fuse_shad = self.bce_logit(self.fuse_pred_shad, self.shadowmask_img, self.shadeless_inhand, self.shaded_inhand)
+        loss1_shad = self.bce_logit(self.pred_down1_shad, self.shadowmask_img, self.shadeless_inhand, self.shaded_inhand)
+        loss2_shad = self.bce_logit(self.pred_down2_shad, self.shadowmask_img, self.shadeless_inhand, self.shaded_inhand)
+        loss3_shad = self.bce_logit(self.pred_down3_shad, self.shadowmask_img, self.shadeless_inhand, self.shaded_inhand)
+        loss4_shad = self.bce_logit(self.pred_down4_shad, self.shadowmask_img, self.shadeless_inhand, self.shaded_inhand)
+        loss0_shad = self.bce_logit(self.pred_down0_shad, self.shadowmask_img, self.shadeless_inhand, self.shaded_inhand)
 
         loss_fuse_dst1 = self.bce_logit_dst(self.fuse_pred_dst1, self.shadeless_inhand)
         loss1_dst1 = self.bce_logit_dst(self.pred_down1_dst1, self.shadeless_inhand)
@@ -91,12 +91,12 @@ class DSDSIDModel(BaseModel):
         loss4_dst1 = self.bce_logit_dst(self.pred_down4_dst1, self.shadeless_inhand)
         loss0_dst1 = self.bce_logit_dst(self.pred_down0_dst1, self.shadeless_inhand)
         
-        loss_fuse_dst2 = self.bce_logit_dst(self.fuse_pred_dst2, self.handmask)
-        loss1_dst2 = self.bce_logit_dst(self.pred_down1_dst2, self.handmask)
-        loss2_dst2 = self.bce_logit_dst(self.pred_down2_dst2, self.handmask)
-        loss3_dst2 = self.bce_logit_dst(self.pred_down3_dst2, self.handmask)
-        loss4_dst2 = self.bce_logit_dst(self.pred_down4_dst2, self.handmask)
-        loss0_dst2 = self.bce_logit_dst(self.pred_down0_dst2, self.handmask)
+        loss_fuse_dst2 = self.bce_logit_dst(self.fuse_pred_dst2, self.shaded_inhand)
+        loss1_dst2 = self.bce_logit_dst(self.pred_down1_dst2, self.shaded_inhand)
+        loss2_dst2 = self.bce_logit_dst(self.pred_down2_dst2, self.shaded_inhand)
+        loss3_dst2 = self.bce_logit_dst(self.pred_down3_dst2, self.shaded_inhand)
+        loss4_dst2 = self.bce_logit_dst(self.pred_down4_dst2, self.shaded_inhand)
+        loss0_dst2 = self.bce_logit_dst(self.pred_down0_dst2, self.shaded_inhand)
 
         self.loss_G1_L1 = loss_fuse_shad + loss1_shad + loss2_shad + loss3_shad + loss4_shad + loss0_shad
         self.loss_G1DST1_L1 = loss_fuse_dst1 + loss1_dst1 + loss2_dst1 + loss3_dst1 + loss4_dst1 + loss0_dst1

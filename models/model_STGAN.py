@@ -115,7 +115,6 @@ class STGANModel(BaseModel):
         self.backward_D()
         self.optimizer_D.step()
 
-     
         self.set_requires_grad([self.netSTGAN1.netD, self.netSTGAN2.netD], False) # Freeze D
         self.forward_D()   
         

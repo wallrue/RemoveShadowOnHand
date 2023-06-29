@@ -13,6 +13,7 @@ from PIL import Image
 from data.base_dataset import BaseDataset
 from data.transform import get_transform_list
 from data.image_folder import make_dataset
+import cv2
 
 class ShadowSyntheticDataset(BaseDataset):
     def name(self):
@@ -80,12 +81,40 @@ class ShadowSyntheticDataset(BaseDataset):
         birdy['w'] = ow
         birdy['h'] = oh
         birdy['shadowfull_paths'] = img_path
-        birdy['shadowmask_baths'] = shadow_path
+        birdy['shadowmask_paths'] = shadow_path
+        
+        A_img_num = (np.transpose(birdy['shadowfull'].numpy(), (1,2,0)) + 1.0)/2.0 
+        skinmask = self.GetSkinMask(A_img_num)
+        skinmask = torch.from_numpy(skinmask*2.0 -1.0)
+        birdy['skinmask'] = torch.permute(skinmask, (2, 0, 1))
         
         if torch.sum(birdy['shadowmask']>0) < 30 :
             shadow_param=[0,1,0,1,0,1]
         birdy['shadowparams'] = torch.FloatTensor(np.array(shadow_param))
         return birdy 
+    
+    def GetSkinMask(self, num_img): #Tensor (3 channels) in range [0, 1]   
+    
+        img = np.uint8(num_img*255)
+
+        # Skin color range for hsv color space 
+        img_HSV = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
+        HSV_mask = cv2.inRange(img_HSV, (0, 15, 0), (17,170,255)) 
+        HSV_mask = cv2.morphologyEx(HSV_mask, cv2.MORPH_OPEN, np.ones((9,9), np.uint8))
+        
+        # Skin color range for hsv color space 
+        img_YCrCb = cv2.cvtColor(img, cv2.COLOR_RGB2YCrCb)
+        YCrCb_mask = cv2.inRange(img_YCrCb, (0, 135, 85), (255,180,135)) 
+        YCrCb_mask = cv2.morphologyEx(YCrCb_mask, cv2.MORPH_OPEN, np.ones((9,9), np.uint8))
+        
+        # Merge skin detection (YCbCr and hsv)
+        global_mask=cv2.bitwise_and(YCrCb_mask,HSV_mask)
+        global_mask=cv2.medianBlur(global_mask,3)
+        global_mask = cv2.dilate(global_mask, np.ones((9,9), np.uint8), iterations = 2)
+        
+        global_mask = np.expand_dims(global_mask/255, axis=2)
+
+        return global_mask
     
     def __len__(self):
         return max(self.img_size, self.shadow_size)

@@ -1,8 +1,8 @@
 ###############################################################################
-# This file contains class of the dataset named ShadowSynthetic which includes 
-# full shadow images, masks of shadow, free shadow images, params of shadow
-# hand segmentation images, masks of hand, shadow inside hand images, 
-# shadow outside hand images
+# This file contains class of the dataset named RawSyntheticDataset which includes 
+# hand image, back ground and shadow images; in addition, NTUST_IP
+# those subsets will be combined together in order to generate 
+# a synthetic dataset each training loop
 ###############################################################################
 
 import os.path
@@ -27,23 +27,27 @@ class RawSyntheticDataset(BaseDataset):
         self.dir_shadowmask = os.path.join(opt.dataroot, 'shadow')
         self.dir_background = os.path.join(opt.dataroot, 'background\\val')
         self.dir_handimg = os.path.join(opt.dataroot, 'hands')
-        self.dir_handimg_ip = os.path.join(opt.dataroot, 'NTUST_IP')
         
         self.shadow_list = list(paths.list_images(self.dir_shadowmask))
         self.background_list = list(paths.list_images(self.dir_background))
         self.handimg_list = list(paths.list_images(self.dir_handimg))
-        self.handimg_ip_list = list(paths.list_images(self.dir_handimg_ip))
         
         random.shuffle(self.shadow_list)
         random.shuffle(self.background_list)
         random.shuffle(self.handimg_list)
-        random.shuffle(self.handimg_ip_list)
-        
+
         self.transformData_handimg = transforms.Compose(get_transform_for_synthetic(self.opt, 'handimg'))
         self.transformData_background = transforms.Compose(get_transform_for_synthetic(self.opt, 'background'))
         self.transformData_shadow = transforms.Compose(get_transform_for_synthetic(self.opt, 'shadow'))
         
-        self.count = 0
+        self.count = 0 #Variables to save samples from dataset
+        
+        # Adding the NTUST_IP dataset ---------------------------------------
+        self.dir_handimg_ip = os.path.join(opt.dataroot, 'NTUST_IP')
+        self.adding_NTUST_IP = os.path.exists(self.dir_handimg_ip) #True
+        if self.adding_NTUST_IP:
+            self.handimg_ip_list = list(paths.list_images(self.dir_handimg_ip))
+            random.shuffle(self.handimg_ip_list)
         
     def shadow_validator(self, shadow_img, handmask_img):
         valid_score = np.sum(shadow_img)/ np.sum(handmask_img) 
@@ -74,7 +78,6 @@ class RawSyntheticDataset(BaseDataset):
         np.clip(hand_shadeless, 0.0, 1.0, out=hand_shadeless)
         np.clip(hand_shaded, 0.0, 1.0, out=hand_shaded)
         return hand_shadeless, hand_shaded
-    
 
     def relit(self, x, a, b): # Functions for computing relit param
         return np.uint8((a * x.astype(np.float64)/255 + b)*255)
@@ -118,18 +121,9 @@ class RawSyntheticDataset(BaseDataset):
         B_t = target[:,:,2][tuple([i,j])]
         
         c_bounds = [[1,-0.1],[10,0.5]]
-        
         Rpopt, pcov = curve_fit(self.relit, R_s, R_t, bounds=c_bounds)
         Gpopt, pcov = curve_fit(self.relit, G_s, G_t, bounds=c_bounds)
         Bpopt, pcov = curve_fit(self.relit, B_s, B_t, bounds=c_bounds)
-        
-        # #Compute error
-        # relitim = self.im_relit(Rpopt,Gpopt,Bpopt,sd)
-        # error = np.mean(np.abs(relitim[tuple([i,j])].astype(np.float64) - sdfree[tuple([i,j])]).astype(np.float64))
-        
-        # f = open("C:\\Users\\lemin\\Downloads\\image_test\\params.txt","a")
-        # f.write("%f %f %f %f %f %f %f"%(error, Rpopt[1],Rpopt[0],Gpopt[1],Gpopt[0],Bpopt[1],Bpopt[0]))
-        # f.close()   
         
         return Rpopt[1],Rpopt[0],Gpopt[1],Gpopt[0],Bpopt[1],Bpopt[0]
         
@@ -137,16 +131,8 @@ class RawSyntheticDataset(BaseDataset):
         
         birdy = dict()
         
-        if index < len(self.handimg_ip_list):
-            index_img = index #- len(self.handimg_list)
-            background = self.transformData_background(Image.open(self.handimg_ip_list[index_img]).convert("RGB"))
-            background_img = (np.transpose(background.numpy(), (1,2,0)) + 1.0)/2.0 
-            hand_img = background_img
-            hand_norm = torch.ones((np.shape(background_img)[0], np.shape(background_img)[1], 1)).numpy()
-            hand_mask = torch.ones((np.shape(background_img)[0], np.shape(background_img)[1], 1)).numpy()
-        else:
-            #index_img = index % len(self.handimg_list)
-            index_img = index - len(self.handimg_ip_list)
+        if index < len(self.handimg_list):
+            index_img = index
             handimg = self.transformData_handimg(Image.open(self.handimg_list[index_img]).convert("RGB"))
             background = self.transformData_background(Image.open(self.background_list[index_img]).convert("RGB"))
             
@@ -154,8 +140,14 @@ class RawSyntheticDataset(BaseDataset):
             hand_img = (np.transpose(handimg['img'].numpy(), (1,2,0)) + 1.0)/2.0
             hand_norm = (np.transpose(handimg['binary_normal'].numpy(), (1,2,0)) + 1.0)/2.0
             hand_mask = (np.transpose(handimg['binary_mask'].numpy(), (1,2,0)) + 1.0)/2.0
+        else:         # Adding the NTUST_IP dataset ----------------------------------------
+            index_img = index - len(self.handimg_list)
+            background = self.transformData_background(Image.open(self.handimg_ip_list[index_img]).convert("RGB"))
+            background_img = (np.transpose(background.numpy(), (1,2,0)) + 1.0)/2.0 
+            hand_img = background_img
+            hand_norm = torch.ones((np.shape(background_img)[0], np.shape(background_img)[1], 1)).numpy()
+            hand_mask = torch.ones((np.shape(background_img)[0], np.shape(background_img)[1], 1)).numpy()
 
-            
         # Create shadow mask on hand
         shadow_id = index_img % len(self.shadow_list)
         shadowimg = self.transformData_shadow(Image.open(self.shadow_list[shadow_id]).convert("RGB"))
@@ -171,7 +163,9 @@ class RawSyntheticDataset(BaseDataset):
 
         shadow_param = self.compute_params(full_shadow_img, shadow_img, full_hand_img)  
         skinmask = self.GetSkinMask(full_shadow_img)
-        # if self.count < 5: # Save dataset to review
+        
+        # Save dataset to review ----------------------------------------------
+        # if self.count < 20: #Save 20 samples
         #     self.count += 1
         #     cv2.imwrite("C:\\Users\\m1101\\Downloads\\image_test\\{}_full_shadow_img.png".format(index), cv2.cvtColor(np.uint8(full_shadow_img*255), cv2.COLOR_RGB2BGR))
         #     cv2.imwrite("C:\\Users\\m1101\\Downloads\\image_test\\{}_shadow_img.png".format(index), np.uint8(shadow_img*255))
@@ -224,10 +218,4 @@ class RawSyntheticDataset(BaseDataset):
         return global_mask
     
     def __len__(self):
-        return len(self.handimg_list) + len(self.handimg_ip_list)
-    
-    def load_img(self, img_path, size = (224, 224), img_mode = 'L'):
-        if os.path.isfile(img_path):
-            return Image.open(img_path) 
-        else:
-            return Image.fromarray(np.zeros((int(size[0]),int(size[1])),dtype = np.float), mode = img_mode)
+        return len(self.handimg_list) + len(self.handimg_ip_list) if self.adding_NTUST_IP else len(self.handimg_list)

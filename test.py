@@ -183,30 +183,50 @@ if __name__=='__main__':
     Example of datasetname: shadowparam, shadowsynthetic, single
     Example of modelname: DSDSID, SIDSTGAN, STGAN
     """
-    checkpoint_dir = os.getcwd() + "\\checkpoints\\"    
+    checkpoint_dir = os.getcwd() + "\\_checkpoints\\"    
     if not os.path.exists(checkpoint_dir):
         os.mkdir(checkpoint_dir)
     
     test_options = TestOptions()
-    dataset_dir = {"NTUST_HS": "C:\\Users\\m1101\\Downloads\\NTUST_HS_Testset",
-                   "rawsynthetic": "C:\\Users\\m1101\\Downloads\\SYNTHETIC_HAND", #"C:\\Users\\m1101\\Downloads\\data_creating\\",
-                   "shadowparam": "C:\\Users\\m1101\\Downloads\\NTUST_HS_Testset\\",
-                   "shadowsynthetic": "C:\\Users\\m1101\\Downloads\\SYNTHETIC_HAND",
+    dataset_dir = {"NTUST_HS": os.getcwd() + "\\_database\\NTUST_HS_Testset",
+                   "rawsynthetic": os.getcwd() + "\\_database\\data_creating",
+                   "shadowparam": os.getcwd() + "\\_database\\NTUST_HS_SYNTHETIC",
+                   "shadowsynthetic": os.getcwd() + "\\_database\\SYNTHETIC_HAND",
                    }
-    checkpoints_dir = {"NTUST_HS": checkpoint_dir,
-                       "rawsynthetic": checkpoint_dir,
-                       "shadowparam": checkpoint_dir
+    checkpoints_dir = {"rawsynthetic": checkpoint_dir,
+                       "shadowparam": checkpoint_dir,
+                       "shadowsynthetic": checkpoint_dir
                        }
 
-    testing_dict =[ ["rawsynthetic",   "STGAN",            [[0, 0], [0, 0]]], 
-                    ["rawsynthetic",   "SIDSTGAN",         [[0, 0], [5, 0]]],
-                    ["rawsynthetic",   "SIDPAMIwISTGAN",   [[0, 0], [5, 0]]],
-                    #["rawsynthetic",   "DSDSID",           [[], [5, 0]]],
-                    #["rawsynthetic",   "MedSegDiff",       [[], [5, 0]]] 
+    testing_dict =[ ["rawsynthetic",   "STGAN",            [[0, 0], [0, 0]], False],
+                    ["rawsynthetic",   "SIDSTGAN",         [[0, 0], [5, 0]], False],
+                    ["rawsynthetic",   "SIDPAMIwISTGAN",   [[0, 0], [5, 0]], False],
+                    ["rawsynthetic",   "STGAN",            [[0, 0], [0, 0]], True],
+                    ["rawsynthetic",   "SIDSTGAN",         [[0, 0], [5, 0]], True],
+                    ["rawsynthetic",   "SIDPAMIwISTGAN",   [[0, 0], [5, 0]], True],
+                    
+                    ["shadowparam",   "STGAN",            [[0, 0], [0, 0]], False],
+                    ["shadowparam",   "SIDSTGAN",         [[0, 0], [5, 0]], False],
+                    ["shadowparam",   "SIDPAMIwISTGAN",   [[0, 0], [5, 0]], False],
+                    ["shadowparam",   "STGAN",            [[0, 0], [0, 0]], True],
+                    ["shadowparam",   "SIDSTGAN",         [[0, 0], [5, 0]], True],
+                    ["shadowparam",   "SIDPAMIwISTGAN",   [[0, 0], [5, 0]], True],
+                    
+                    ["shadowsynthetic",   "STGAN",            [[0, 0], [0, 0]], False],
+                    ["shadowsynthetic",   "SIDSTGAN",         [[0, 0], [5, 0]], False],
+                    ["shadowsynthetic",   "SIDPAMIwISTGAN",   [[0, 0], [5, 0]], False],
+                    ["shadowsynthetic",   "STGAN",            [[0, 0], [0, 0]], True],
+                    ["shadowsynthetic",   "SIDSTGAN",         [[0, 0], [5, 0]], True],
+                    ["shadowsynthetic",   "SIDPAMIwISTGAN",   [[0, 0], [5, 0]], True],
+                    
+                    ["shadowsynthetic",   "DSDSID",           [[], [5, 0]], False], 
+                    ["shadowsynthetic",   "MedSegDiff",       [[], [5, 0]], False],
+                    ["rawsynthetic",   "DSDSID",           [[], [5, 0]], False],
+                    ["rawsynthetic",   "MedSegDiff",       [[], [5, 0]], False],
                     ]
         
-    result_dir = os.getcwd() + "\\result_set\\"
-    for dataset_name, model_name, netid_list in testing_dict:    
+    result_dir = os.getcwd() + "\\_result_set\\"
+    for dataset_name, model_name, netid_list, use_skinmask in testing_dict:    
         print('============== Start testing: dataset {}, model {} =============='.format(model_name, dataset_name))
         # Model defination   
         test_options.net1_id, test_options.net2_id = netid_list
@@ -215,6 +235,7 @@ if __name__=='__main__':
         test_options.model_name = model_name
         opt = test_options.parse()
         
+        opt.use_skinmask = use_skinmask        
         if opt.use_skinmask:
             opt.name = opt.name + "_HandSeg"
         test_options.print_options(opt)
@@ -222,8 +243,10 @@ if __name__=='__main__':
         model = create_model(opt)
         model.setup(opt)
 
-        opt.dataset_mode = "shadowsynthetic" # Dataset loading -- for "NTUST_HS"
-        opt.dataroot = dataset_dir[dataset_name]
+        # Loading test dataset
+        test_dataset = "shadowsynthetic" #"NTUST_HS"
+        opt.dataset_mode = test_dataset # Dataset loading -- for "NTUST_HS"
+        opt.dataroot = dataset_dir[test_dataset]
         data_loader = CustomDatasetDataLoader(opt)
         dataset = data_loader.load_data()
 

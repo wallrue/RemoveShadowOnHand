@@ -195,7 +195,6 @@ class DSDNet(nn.Module):
         down1 = self.down1(layer1)
         down0 = self.down0(layer0)
 
-        
         down4_shad = down4
         down4_dst1 = self.dst1(down4)
         down4_dst2 = self.dst2(down4)
@@ -225,7 +224,6 @@ class DSDNet(nn.Module):
         pred_down4_dst2 = F.interpolate(up_down4_dst2,size=x.size()[2:], mode='bilinear')
         pred_down4_shad = F.interpolate(up_down4_shad,size=x.size()[2:], mode='bilinear')
 
-        
         down3_dst1 = self.dst1(down3)
         down3_dst2 = self.dst2(down3)
         down3_shad = down3
@@ -249,7 +247,6 @@ class DSDNet(nn.Module):
         pred_down3_dst2 = F.interpolate(up_down3_dst2,size=x.size()[2:], mode='bilinear')
         pred_down3_shad = F.interpolate(up_down3_shad,size=x.size()[2:], mode='bilinear')
 
-
         down2_dst1 = self.dst1(down2)
         down2_dst2 = self.dst2(down2)
         down2_shad = down2
@@ -270,7 +267,6 @@ class DSDNet(nn.Module):
         pred_down2_dst2 = F.interpolate(up_down2_dst2,size=x.size()[2:], mode='bilinear')
         pred_down2_shad = F.interpolate(up_down2_shad,size=x.size()[2:], mode='bilinear')
 
-        
         down1_dst1 = self.dst1(down1)
         down1_dst2 = self.dst2(down1)
         down1_shad = down1
@@ -288,7 +284,6 @@ class DSDNet(nn.Module):
         pred_down1_dst2 = F.interpolate(up_down1_dst2,size=x.size()[2:], mode='bilinear')
         pred_down1_shad = F.interpolate(up_down1_shad,size=x.size()[2:], mode='bilinear')
 
-
         down0_dst1 = self.dst1(down0)
         down0_dst2 = self.dst2(down0)
         down0_shad = down0
@@ -296,14 +291,12 @@ class DSDNet(nn.Module):
         down0_shad = (1 + self.attention0_hl(torch.cat((down0_shad, down0_dst2), 1))) * down0_shad
         down0_shad = F.relu(-self.refine0_hl(torch.cat((down0_shad, down0_dst1), 1)) + down0_shad, True)
 
-
         up_down0_dst1 =self.conv1x1_ReLU_down0(torch.cat((down0_dst1,down1_dst1_0,down2_dst1_0,down3_dst1_0,down4_dst1_0),1))
         up_down0_dst2 = self.conv1x1_ReLU_down0(torch.cat((down0_dst2,down1_dst2_0,down2_dst2_0,down3_dst2_0,down4_dst2_0),1))
         up_down0_shad = self.conv1x1_ReLU_down0(torch.cat((down0_shad,down1_shad_0,down2_shad_0,down3_shad_0,down4_shad_0),1))
         pred_down0_dst1 = F.interpolate(up_down0_dst1,size=x.size()[2:], mode='bilinear')
         pred_down0_dst2 = F.interpolate(up_down0_dst2,size=x.size()[2:], mode='bilinear')
         pred_down0_shad = F.interpolate(up_down0_shad,size=x.size()[2:], mode='bilinear')
-
 
         fuse_pred_shad = self.fuse_predict(torch.cat((pred_down0_shad,pred_down1_shad,pred_down2_shad,pred_down3_shad,pred_down4_shad),1))
         fuse_pred_dst1 = self.fuse_predict(torch.cat((pred_down0_dst1,pred_down1_dst1,pred_down2_dst1,pred_down3_dst1,pred_down4_dst1),1))
