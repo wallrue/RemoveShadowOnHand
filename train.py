@@ -112,6 +112,7 @@ def train_loop(opt, model): #dataset, model):
     """
     cuda_tensor = torch.cuda.FloatTensor if len(opt.gpu_ids) > 0 else torch.FloatTensor
     for epoch in range(opt.epoch_count, opt.niter + opt.niter_decay + 1):
+        if epoch == 131: break;
         # Dataset loading
         data_loader = CustomDatasetDataLoader(opt)
         dataset = data_loader.load_data()
@@ -200,43 +201,43 @@ if __name__=='__main__':
     
     # Experient 1: Test the performance of backbones on "shadowparam" dataset
     if BACKBONE_TEST:
-        model_name_list = ["STGAN"] #["SIDPAMISTGAN", "SIDPAMIwISTGAN"]
+        model_name_list = ["STGAN", "SIDSTGAN", "SIDPAMIwISTGAN"]
         training_dict = list()
         for model_name in model_name_list:
             if model_name == "STGAN":        
                 training_list = [["shadowparam", model_name, [[i_netG, i_netD],[i_netG, i_netD]], False] for i_netG in range(4) for i_netD in range(2)]
             else: 
-                i_netG, i_netD = 0, 1 #The best result from testing "STGAN"
+                i_netG, i_netD = 0, 0 #The best result from testing "STGAN"
                 training_list = [["shadowparam", model_name, [[i_netG, i_netD],[i_netS, i_netG]], False] for i_netS in range(7)] 
             training_dict = training_dict + training_list
     # Experient 2: Test the best backbone from experiment 1 in "shadowsynthetic" dataset
     else:
         #training_dict = [[training_dataset, training_model, backbone, use_skinmask]]
-        training_dict =[["rawsynthetic",   "STGAN",            [[0, 0], [0, 0]], False],
-                        ["rawsynthetic",   "SIDSTGAN",         [[0, 0], [5, 0]], False],
-                        ["rawsynthetic",   "SIDPAMIwISTGAN",   [[0, 0], [5, 0]], False],
+        training_dict =[#["rawsynthetic",   "STGAN",            [[0, 0], [0, 0]], False],
+                        #["rawsynthetic",   "SIDSTGAN",         [[0, 0], [5, 0]], False],
+                        #["rawsynthetic",   "SIDPAMIwISTGAN",   [[0, 0], [5, 0]], False],
                         ["rawsynthetic",   "STGAN",            [[0, 0], [0, 0]], True],
                         ["rawsynthetic",   "SIDSTGAN",         [[0, 0], [5, 0]], True],
                         ["rawsynthetic",   "SIDPAMIwISTGAN",   [[0, 0], [5, 0]], True],
                         
-                        ["shadowparam",   "STGAN",            [[0, 0], [0, 0]], False],
-                        ["shadowparam",   "SIDSTGAN",         [[0, 0], [5, 0]], False],
-                        ["shadowparam",   "SIDPAMIwISTGAN",   [[0, 0], [5, 0]], False],
-                        ["shadowparam",   "STGAN",            [[0, 0], [0, 0]], True],
-                        ["shadowparam",   "SIDSTGAN",         [[0, 0], [5, 0]], True],
-                        ["shadowparam",   "SIDPAMIwISTGAN",   [[0, 0], [5, 0]], True],
+                        # ["shadowparam",   "STGAN",            [[0, 0], [0, 0]], False],
+                        # ["shadowparam",   "SIDSTGAN",         [[0, 0], [5, 0]], False],
+                        # ["shadowparam",   "SIDPAMIwISTGAN",   [[0, 0], [5, 0]], False],
+                        # ["shadowparam",   "STGAN",            [[0, 0], [0, 0]], True],
+                        # ["shadowparam",   "SIDSTGAN",         [[0, 0], [5, 0]], True],
+                        # ["shadowparam",   "SIDPAMIwISTGAN",   [[0, 0], [5, 0]], True],
                         
-                        ["shadowsynthetic",   "STGAN",            [[0, 0], [0, 0]], False],
-                        ["shadowsynthetic",   "SIDSTGAN",         [[0, 0], [5, 0]], False],
-                        ["shadowsynthetic",   "SIDPAMIwISTGAN",   [[0, 0], [5, 0]], False],
-                        ["shadowsynthetic",   "STGAN",            [[0, 0], [0, 0]], True],
-                        ["shadowsynthetic",   "SIDSTGAN",         [[0, 0], [5, 0]], True],
-                        ["shadowsynthetic",   "SIDPAMIwISTGAN",   [[0, 0], [5, 0]], True],
+                        # ["shadowsynthetic",   "STGAN",            [[0, 0], [0, 0]], False],
+                        # ["shadowsynthetic",   "SIDSTGAN",         [[0, 0], [5, 0]], False],
+                        # ["shadowsynthetic",   "SIDPAMIwISTGAN",   [[0, 0], [5, 0]], False],
+                        # ["shadowsynthetic",   "STGAN",            [[0, 0], [0, 0]], True],
+                        # ["shadowsynthetic",   "SIDSTGAN",         [[0, 0], [5, 0]], True],
+                        # ["shadowsynthetic",   "SIDPAMIwISTGAN",   [[0, 0], [5, 0]], True],
                         
-                        ["shadowsynthetic",   "DSDSID",           [[], [5, 0]], False],  # training DSD requires dataset having hand mask 
-                        ["shadowsynthetic",   "MedSegDiff",       [[], [5, 0]], False],
-                        ["rawsynthetic",   "DSDSID",           [[], [5, 0]], False], 
-                        ["rawsynthetic",   "MedSegDiff",       [[], [5, 0]], False],
+                        # ["shadowsynthetic",   "DSDSID",           [[], [5, 0]], False],  # training DSD requires dataset having hand mask 
+                        # ["shadowsynthetic",   "MedSegDiff",       [[], [5, 0]], False],
+                        # ["rawsynthetic",   "DSDSID",           [[], [5, 0]], False], 
+                        # ["rawsynthetic",   "MedSegDiff",       [[], [5, 0]], False],
                         ]
 
     """ RUN SECTION """

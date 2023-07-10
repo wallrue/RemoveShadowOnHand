@@ -1,10 +1,10 @@
 #!/bin/bash
 #NOTE: Modify BACKBONE_TEST, training_dict, dataset_dir, checkpoints_dir in train.py to choose models to test
-epoch_checkpoint_load='latest'
+epoch_checkpoint_load=120
+batch_size=4
+gpu_ids='-1' #not use gpu
 loadSize=256
 fineSize=256
-batch_size=2
-gpu_ids=0
 
 CMD="python test.py \
     --loadSize ${loadSize} \
@@ -18,4 +18,4 @@ c="${CMD}"
 
 echo $c
 eval $c
-
+$SHELL #prevent bash window from closing

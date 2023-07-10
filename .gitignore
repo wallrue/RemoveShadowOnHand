@@ -1,6 +1,6 @@
-_result_set/
 _checkpoints/
 _database/
+_result/
 .ipynb_checkpoints/
 **/.ipynb_checkpoints/
 **/__pycache__/

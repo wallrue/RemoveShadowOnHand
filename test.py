@@ -205,27 +205,28 @@ if __name__=='__main__':
                     ["rawsynthetic",   "SIDSTGAN",         [[0, 0], [5, 0]], True],
                     ["rawsynthetic",   "SIDPAMIwISTGAN",   [[0, 0], [5, 0]], True],
                     
-                    ["shadowparam",   "STGAN",            [[0, 0], [0, 0]], False],
-                    ["shadowparam",   "SIDSTGAN",         [[0, 0], [5, 0]], False],
-                    ["shadowparam",   "SIDPAMIwISTGAN",   [[0, 0], [5, 0]], False],
-                    ["shadowparam",   "STGAN",            [[0, 0], [0, 0]], True],
-                    ["shadowparam",   "SIDSTGAN",         [[0, 0], [5, 0]], True],
-                    ["shadowparam",   "SIDPAMIwISTGAN",   [[0, 0], [5, 0]], True],
+                    # ["shadowparam",   "STGAN",            [[0, 0], [0, 0]], False],
+                    # ["shadowparam",   "SIDSTGAN",         [[0, 0], [5, 0]], False],
+                    # ["shadowparam",   "SIDPAMIwISTGAN",   [[0, 0], [5, 0]], False],
+                    # ["shadowparam",   "STGAN",            [[0, 0], [0, 0]], True],
+                    # ["shadowparam",   "SIDSTGAN",         [[0, 0], [5, 0]], True],
+                    # ["shadowparam",   "SIDPAMIwISTGAN",   [[0, 0], [5, 0]], True],
                     
-                    ["shadowsynthetic",   "STGAN",            [[0, 0], [0, 0]], False],
-                    ["shadowsynthetic",   "SIDSTGAN",         [[0, 0], [5, 0]], False],
-                    ["shadowsynthetic",   "SIDPAMIwISTGAN",   [[0, 0], [5, 0]], False],
-                    ["shadowsynthetic",   "STGAN",            [[0, 0], [0, 0]], True],
-                    ["shadowsynthetic",   "SIDSTGAN",         [[0, 0], [5, 0]], True],
-                    ["shadowsynthetic",   "SIDPAMIwISTGAN",   [[0, 0], [5, 0]], True],
+                    # ["shadowsynthetic",   "STGAN",            [[0, 0], [0, 0]], False],
+                    # ["shadowsynthetic",   "SIDSTGAN",         [[0, 0], [5, 0]], False],
+                    # ["shadowsynthetic",   "SIDPAMIwISTGAN",   [[0, 0], [5, 0]], False],
+                    # ["shadowsynthetic",   "STGAN",            [[0, 0], [0, 0]], True],
+                    # ["shadowsynthetic",   "SIDSTGAN",         [[0, 0], [5, 0]], True],
+                    # ["shadowsynthetic",   "SIDPAMIwISTGAN",   [[0, 0], [5, 0]], True],
                     
-                    ["shadowsynthetic",   "DSDSID",           [[], [5, 0]], False], 
-                    ["shadowsynthetic",   "MedSegDiff",       [[], [5, 0]], False],
-                    ["rawsynthetic",   "DSDSID",           [[], [5, 0]], False],
-                    ["rawsynthetic",   "MedSegDiff",       [[], [5, 0]], False],
+                    # ["shadowsynthetic",   "DSDSID",           [[], [5, 0]], False], 
+                    # ["shadowsynthetic",   "MedSegDiff",       [[], [5, 0]], False],
+                    # ["rawsynthetic",   "DSDSID",           [[], [5, 0]], False],
+                    # ["rawsynthetic",   "MedSegDiff",       [[], [5, 0]], False],
                     ]
         
-    result_dir = os.getcwd() + "\\_result_set\\"
+    result_dir = os.path.expanduser( '~' ) + "\\Downloads\\result_set\\" #"os.getcwd() + "\\_result_set\\"
+    test_dataset_mode, test_dataset_path = "NTUST_HS", "NTUST_HS"#"shadowsynthetic"
     for dataset_name, model_name, netid_list, use_skinmask in testing_dict:    
         print('============== Start testing: dataset {}, model {} =============='.format(model_name, dataset_name))
         # Model defination   
@@ -244,9 +245,8 @@ if __name__=='__main__':
         model.setup(opt)
 
         # Loading test dataset
-        test_dataset = "shadowsynthetic" #"NTUST_HS"
-        opt.dataset_mode = test_dataset # Dataset loading -- for "NTUST_HS"
-        opt.dataroot = dataset_dir[test_dataset]
+        opt.dataset_mode = test_dataset_mode # Dataset loading -- for "NTUST_HS"
+        opt.dataroot = dataset_dir[test_dataset_path]
         data_loader = CustomDatasetDataLoader(opt)
         dataset = data_loader.load_data()
 
