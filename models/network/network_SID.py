@@ -15,9 +15,9 @@ class SIDNet(nn.Module):
         """
         super(SIDNet, self).__init__()
         #self.training = istrain    
-        self.netG = define_G(opt.input_nc+1, 6, opt.ngf, net_g, opt.norm,
+        self.netG = define_G(opt.input_nc + 1 + opt.use_skinmask, 6, opt.ngf, net_g, opt.norm,
                                       not opt.no_dropout, opt.init_type, opt.init_gain, [])
-        self.netM = define_G(6+1, opt.output_nc, opt.ngf, net_m, opt.norm,
+        self.netM = define_G(6 + 1 + opt.use_skinmask, opt.output_nc, opt.ngf, net_m, opt.norm,
                                       not opt.no_dropout, opt.init_type, opt.init_gain, [])
 
     def forward(self, input_img, fake_shadow_image):

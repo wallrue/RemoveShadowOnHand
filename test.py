@@ -225,7 +225,7 @@ if __name__=='__main__':
                     # ["rawsynthetic",   "MedSegDiff",       [[], [5, 0]], False],
                     ]
         
-    result_dir = os.path.expanduser( '~' ) + "\\Downloads\\result_set\\" #"os.getcwd() + "\\_result_set\\"
+    result_dir = os.getcwd() + "\\_result_set\\"
     test_dataset_mode, test_dataset_path = "NTUST_HS", "NTUST_HS"#"shadowsynthetic"
     for dataset_name, model_name, netid_list, use_skinmask in testing_dict:    
         print('============== Start testing: dataset {}, model {} =============='.format(model_name, dataset_name))

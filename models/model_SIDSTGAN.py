@@ -64,7 +64,8 @@ class SIDSTGANModel(BaseModel):
         self.fake_shadow_image = self.netG1.forward_G(self.inputNet1)
         
         # Compute output of generator 2
-        self.shadow_param_pred, self.alpha_pred, self.fake_free_shadow_image = self.netG2(self.input_img, self.fake_shadow_image)
+        self.compounded_shadow = torch.cat((self.fake_shadow_image, self.skin_mask), 1) if self.opt.use_skinmask else self.fake_shadow_image 
+        self.shadow_param_pred, self.alpha_pred, self.fake_free_shadow_image = self.netG2(self.input_img, self.compounded_shadow)
                 
     def forward_D(self):
         fake_AB = torch.cat((self.inputNet1, self.fake_shadow_image), 1)

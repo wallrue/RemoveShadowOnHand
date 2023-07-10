@@ -1,16 +1,16 @@
 #!/bin/bash
 #NOTE: Modify BACKBONE_TEST, training_dict, dataset_dir, checkpoints_dir in train.py to choose the type of experiment and models to train
-continue_train=true
-epoch_count_start=121
-epoch_checkpoint_load=120
-niter=130
+continue_train=false
+epoch_count_start=1
+epoch_checkpoint_load=80
+niter=10
 niter_decay=10
 
 validDataset_split=0.0
 batch_size=8 #batch_size = 4 for DSD Net
 loadSize=256
 fineSize=256
-gpu_ids=0
+gpu_ids='0,1,2,3'
 
 CMD="python train.py \
     --loadSize ${loadSize} \
@@ -34,7 +34,7 @@ fi
 
 echo $c
 eval $c
-for VARIABLE in 1 2 3
+for VARIABLE in 1 2 3 4 5
 do
     epoch_count_start=$((niter + niter_decay + 1))
     niter=$((niter + niter_decay + niter_decay))
@@ -53,8 +53,8 @@ do
         --continue_train\
         "
     c="${CMD}"
-    #echo $c
-    #eval $c
+    echo $c
+    eval $c
 done
 $SHELL #prevent bash window from closing
 
