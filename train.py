@@ -112,7 +112,6 @@ def train_loop(opt, model): #dataset, model):
     """
     cuda_tensor = torch.cuda.FloatTensor if len(opt.gpu_ids) > 0 else torch.FloatTensor
     for epoch in range(opt.epoch_count, opt.niter + opt.niter_decay + 1):
-        if epoch == 131: break;
         # Dataset loading
         data_loader = CustomDatasetDataLoader(opt)
         dataset = data_loader.load_data()
@@ -213,10 +212,10 @@ if __name__=='__main__':
     # Experient 2: Test the best backbone from experiment 1 in "shadowsynthetic" dataset
     else:
         #training_dict = [[training_dataset, training_model, backbone, use_skinmask]]
-        training_dict =[["rawsynthetic",   "STGAN",            [[0, 0], [0, 0]], False],
-                        ["rawsynthetic",   "SIDSTGAN",         [[0, 0], [5, 0]], False],
-                        ["rawsynthetic",   "SIDPAMIwISTGAN",   [[0, 0], [5, 0]], False],
-                        ["rawsynthetic",   "STGAN",            [[0, 0], [0, 0]], True],
+        training_dict =[#["rawsynthetic",   "STGAN",            [[0, 0], [0, 0]], False],
+                        #["rawsynthetic",   "SIDSTGAN",         [[0, 0], [5, 0]], False],
+                        #["rawsynthetic",   "SIDPAMIwISTGAN",   [[0, 0], [5, 0]], False],
+                        #["rawsynthetic",   "STGAN",            [[0, 0], [0, 0]], True],
                         ["rawsynthetic",   "SIDSTGAN",         [[0, 0], [5, 0]], True],
                         ["rawsynthetic",   "SIDPAMIwISTGAN",   [[0, 0], [5, 0]], True],
                         
