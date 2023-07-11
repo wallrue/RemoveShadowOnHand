@@ -121,7 +121,7 @@ class RawSyntheticDataset(BaseDataset):
         self.opt = opt
         self.root = opt.dataroot
         self.dir_shadowmask = os.path.join(opt.dataroot, 'shadow')
-        self.dir_background = os.path.join(opt.dataroot, 'background\\val')
+        self.dir_background = os.path.join(os.path.join(opt.dataroot, 'background'),'val')
         self.dir_handimg = os.path.join(opt.dataroot, 'hands')
         
         self.shadow_list = list(paths.list_images(self.dir_shadowmask))
@@ -138,7 +138,7 @@ class RawSyntheticDataset(BaseDataset):
         
         self.count = 0 #Variables to save samples from dataset
         self.using_generated_shadow = True
-        self.saved_folder = os.getcwd() + "\\_train_samples\\"
+        self.saved_folder = os.path.join(os.getcwd(), '_train_samples')
         if not os.path.exists(self.saved_folder):
             os.mkdir(self.saved_folder)
             
@@ -268,8 +268,8 @@ class RawSyntheticDataset(BaseDataset):
         while(not self.shadow_validator(shadow_img, hand_mask)):
             count_while += 1
             if count_while > 10: #Save 1 sample
-                cv2.imwrite(self.saved_folder + "\\fail_handmask.png", np.uint8(hand_mask*255))
-                cv2.imwrite(self.saved_folder + "\\fail_shadowimg.png", np.uint8(shadow_img*255))
+                cv2.imwrite(os.path.join(self.saved_folder,"fail_handmask.png"), np.uint8(hand_mask*255))
+                cv2.imwrite(os.path.join(self.saved_folder,"fail_shadowimg.png"), np.uint8(shadow_img*255))
                 
             if self.using_generated_shadow: #using
                 shadowimg = random_shape_generate()
@@ -288,12 +288,12 @@ class RawSyntheticDataset(BaseDataset):
         if self.count < 1: #Save 1 sample
             self.count += 1
             
-            cv2.imwrite(self.saved_folder + "\\{}_full_shadow_img.png".format(index), cv2.cvtColor(np.uint8(full_shadow_img*255), cv2.COLOR_RGB2BGR))
-            cv2.imwrite(self.saved_folder + "\\{}_shadow_img.png".format(index), np.uint8(shadow_img*255))
-            cv2.imwrite(self.saved_folder + "\\{}_full_hand_img.png".format(index), cv2.cvtColor(np.uint8(full_hand_img*255), cv2.COLOR_RGB2BGR))
-            cv2.imwrite(self.saved_folder + "\\{}_hand_img.png".format(index), cv2.cvtColor(np.uint8(hand_img*255), cv2.COLOR_RGB2BGR))
-            cv2.imwrite(self.saved_folder + "\\{}_hand_mask.png".format(index), np.uint8(hand_mask*255))
-            cv2.imwrite(self.saved_folder + "\\{}_skin_mask.png".format(index), np.uint8(skinmask*255))
+            cv2.imwrite(os.path.join(self.saved_folder,"{}_full_shadow_img.png".format(index)), cv2.cvtColor(np.uint8(full_shadow_img*255), cv2.COLOR_RGB2BGR))
+            cv2.imwrite(os.path.join(self.saved_folder,"{}_shadow_img.png".format(index)), np.uint8(shadow_img*255))
+            cv2.imwrite(os.path.join(self.saved_folder,"{}_full_hand_img.png".format(index)), cv2.cvtColor(np.uint8(full_hand_img*255), cv2.COLOR_RGB2BGR))
+            cv2.imwrite(os.path.join(self.saved_folder,"{}_hand_img.png".format(index)), cv2.cvtColor(np.uint8(hand_img*255), cv2.COLOR_RGB2BGR))
+            cv2.imwrite(os.path.join(self.saved_folder,"{}_hand_mask.png".format(index)), np.uint8(hand_mask*255))
+            cv2.imwrite(os.path.join(self.saved_folder,"{}_skin_mask.png".format(index)), np.uint8(skinmask*255))
                         
         shadowfull_image = torch.from_numpy(full_shadow_img*2.0 -1.0)
         shadowmask_image = torch.from_numpy(shadow_img*2.0 -1.0)

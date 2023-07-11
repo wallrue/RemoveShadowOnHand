@@ -67,7 +67,7 @@ class BaseOptions():
         # Model setup: in gather_options by models.get_option_setter()
         parser.set_defaults(name=self.model_name + "_" + self.dataset_mode + net_id_name)
         parser.set_defaults(model=self.model_name)
-        parser.set_defaults(checkpoints_dir=self.checkpoints_root + "\\checkpoints_" + self.model_name)
+        parser.set_defaults(checkpoints_dir=os.path.join(self.checkpoints_root,"checkpoints_" + self.model_name))
         
         # Training setup        
         parser.set_defaults(gpu_ids='0')

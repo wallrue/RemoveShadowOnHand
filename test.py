@@ -105,10 +105,10 @@ def evaluate(dataset, test_model, result_dir, folder_name):
     PNSR_dict = {"original": 0.0, "shadowmask": 0.0, "shadowfree": 0.0}
     SSIM_dict = {"original": 0.0, "shadowmask": 0.0, "shadowfree": 0.0}
     
-    path_list = [result_dir + "//original", 
-                 result_dir + "//groudtruth",
-                 result_dir + f"//shadowmask_{folder_name}",  
-                 result_dir + f"//shadowfree_{folder_name}"]
+    path_list = [os.path.join(result_dir,"original"), 
+                 os.path.join(result_dir,"groudtruth"),
+                 os.path.join(result_dir,"shadowmask_{folder_name}"),  
+                 os.path.join(result_dir,"shadowfree_{folder_name}")]
     if not os.path.exists(result_dir):
         os.mkdir(result_dir)
     for path in path_list:
@@ -162,7 +162,7 @@ def evaluate(dataset, test_model, result_dir, folder_name):
             
             # Save output image after processing
             for idx, path in enumerate(path_list):
-                data_name = path + f"\\{list_imgname[i]}"
+                data_name = os.path.join(path,"{list_imgname[i]}")
                 if not os.path.isfile(data_name):
                     result_img = result_list[idx]
                     if len(np.shape(result_img)) == 3 and np.shape(result_img)[2] == 3:
@@ -188,10 +188,9 @@ if __name__=='__main__':
         os.mkdir(checkpoint_dir)
     
     test_options = TestOptions()
-    dataset_dir = {"NTUST_HS": os.getcwd() + "\\_database\\NTUST_HS_Testset",
-                   "rawsynthetic": os.getcwd() + "\\_database\\data_creating",
-                   "shadowparam": os.getcwd() + "\\_database\\NTUST_HS_SYNTHETIC",
-                   "shadowsynthetic": os.getcwd() + "\\_database\\SYNTHETIC_HAND",
+    dataset_dir = {"NTUST_HS": os.path.join(os.path.join(os.getcwd(),"_database"),"NTUST_HS_Testset"),
+                   "shadowparam": os.path.join(os.path.join(os.getcwd(),"_database"),"NTUST_HS_SYNTHETIC"),
+                   "shadowsynthetic": os.path.join(os.path.join(os.getcwd(),"_database"),"SYNTHETIC_HAND"),
                    }
     checkpoints_dir = {"rawsynthetic": checkpoint_dir,
                        "shadowparam": checkpoint_dir,
@@ -225,7 +224,7 @@ if __name__=='__main__':
                     # ["rawsynthetic",   "MedSegDiff",       [[], [5, 0]], False],
                     ]
         
-    result_dir = os.getcwd() + "\\_result_set\\"
+    result_dir = os.path.join(os.getcwd(), "_result_set")
     test_dataset_mode, test_dataset_path = "NTUST_HS", "NTUST_HS"#"shadowsynthetic"
     for dataset_name, model_name, netid_list, use_skinmask in testing_dict:    
         print('============== Start testing: dataset {}, model {} =============='.format(model_name, dataset_name))

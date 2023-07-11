@@ -181,14 +181,14 @@ if __name__=='__main__':
     Example of modelname: STGAN, SIDSTGAN, SIDPAMIwISTGAN, DSDSID, MedSegDiff
     Example of net_id: lisg of net_id is defined in base_options
     """
-    checkpoint_dir = os.getcwd() + "\\_checkpoints\\"    
+    checkpoint_dir = os.path.join(os.getcwd(),"_checkpoints")    
     if not os.path.exists(checkpoint_dir):
         os.mkdir(checkpoint_dir)
     
     train_options = TrainOptions()
-    dataset_dir = {"rawsynthetic": os.getcwd() + "\\_database\\data_creating",
-                   "shadowparam": os.getcwd() + "\\_database\\NTUST_HS_SYNTHETIC",
-                   "shadowsynthetic": os.getcwd() + "\\_database\\SYNTHETIC_HAND",
+    dataset_dir = {"rawsynthetic": os.path.join(os.path.join(os.getcwd(),"_database"),"data_creating"),
+                   "shadowparam": os.path.join(os.path.join(os.getcwd(),"_database"),"NTUST_HS_SYNTHETIC"),
+                   "shadowsynthetic": os.path.join(os.path.join(os.getcwd(),"_database"),"SYNTHETIC_HAND"),
                    }
     checkpoints_dir = {"rawsynthetic": checkpoint_dir,
                        "shadowparam": checkpoint_dir,
