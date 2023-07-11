@@ -119,6 +119,7 @@ class RawSyntheticDataset(BaseDataset):
     
     def initialize(self, opt):
         self.opt = opt
+        self.cudaTensor = torch.cuda.FloatTensor if len(self.opt.gpu_ids) > 0 else torch.FloatTensor
         self.root = opt.dataroot
         self.dir_shadowmask = os.path.join(opt.dataroot, 'shadow')
         self.dir_background = os.path.join(opt.dataroot, 'background\\val')
@@ -138,14 +139,18 @@ class RawSyntheticDataset(BaseDataset):
         
         self.count = 0 #Variables to save samples from dataset
         self.using_generated_shadow = True
-        
+        self.saved_folder = os.getcwd() + "\\_train_samples\\"
+        if not os.path.exists(self.saved_folder):
+            os.mkdir(self.saved_folder)
+            
         # Adding the NTUST_IP dataset ---------------------------------------
         self.dir_handimg_ip = os.path.join(opt.dataroot, 'NTUST_IP')
         self.adding_NTUST_IP = os.path.exists(self.dir_handimg_ip) #True
         if self.adding_NTUST_IP:
             self.handimg_ip_list = list(paths.list_images(self.dir_handimg_ip))
             random.shuffle(self.handimg_ip_list)
-        
+            
+
     def shadow_validator(self, shadow_img, handmask_img):
         valid_score = np.sum(shadow_img)/ np.sum(handmask_img) 
         return valid_score > 0.2 and valid_score < 0.8
@@ -243,11 +248,13 @@ class RawSyntheticDataset(BaseDataset):
             background_img = (np.transpose(background.numpy(), (1,2,0)) + 1.0)/2.0 
             hand_img = background_img
             hand_norm = torch.ones((np.shape(background_img)[0], np.shape(background_img)[1], 1)).numpy()
-            hand_mask = torch.FloatTensor(self.GetSkinMask(background_img)).numpy() 
-            if np.sum(hand_mask) < (np.shape(background_img)[0]*np.shape(background_img)[1]*0.2):
-                #If we can not detect hand mask, we will not filter shadow inside hand palm
-                torch.ones((np.shape(background_img)[0], np.shape(background_img)[1], 1)).numpy()
+            hand_mask = self.cudaTensor(self.GetSkinMask(background_img)).numpy() 
             
+            background_mask = torch.ones((np.shape(background_img)[0], np.shape(background_img)[1], 1)).numpy()
+            if np.sum(hand_mask)/ np.sum(background_mask) < 0.2:
+                #If we can not detect hand mask, we will not filter shadow inside hand palm
+                hand_mask = background_mask
+                
         # Create shadow mask on hand
         if self.using_generated_shadow: #using
             shadowimg = random_shape_generate()
@@ -258,7 +265,13 @@ class RawSyntheticDataset(BaseDataset):
         shadowimg = (np.transpose(shadowimg.numpy(), (1,2,0)) + 1.0)/2.0
         shadow_img = shadowimg*hand_mask
         
+        count_while = 0
         while(not self.shadow_validator(shadow_img, hand_mask)):
+            count_while += 1
+            if count_while > 10: #Save 1 sample
+                cv2.imwrite(self.saved_folder + "\\fail_handmask.png", np.uint8(hand_mask*255))
+                cv2.imwrite(self.saved_folder + "\\fail_shadowimg.png", np.uint8(shadow_img*255))
+                
             if self.using_generated_shadow: #using
                 shadowimg = random_shape_generate()
             else: #using shadow_mask from ISTD dataset
@@ -276,14 +289,12 @@ class RawSyntheticDataset(BaseDataset):
         if self.count < 1: #Save 1 sample
             self.count += 1
             
-            if not os.path.exists(os.getcwd() + "\\_train_samples\\"):
-                os.mkdir(os.getcwd() + "\\_train_samples\\")
-            cv2.imwrite(os.getcwd() + "\\_train_samples\\{}_full_shadow_img.png".format(index), cv2.cvtColor(np.uint8(full_shadow_img*255), cv2.COLOR_RGB2BGR))
-            cv2.imwrite(os.getcwd() + "\\_train_samples\\{}_shadow_img.png".format(index), np.uint8(shadow_img*255))
-            cv2.imwrite(os.getcwd() + "\\_train_samples\\{}_full_hand_img.png".format(index), cv2.cvtColor(np.uint8(full_hand_img*255), cv2.COLOR_RGB2BGR))
-            cv2.imwrite(os.getcwd() + "\\_train_samples\\{}_hand_img.png".format(index), cv2.cvtColor(np.uint8(hand_img*255), cv2.COLOR_RGB2BGR))
-            cv2.imwrite(os.getcwd() + "\\_train_samples\\{}_hand_mask.png".format(index), np.uint8(hand_mask*255))
-            cv2.imwrite(os.getcwd() + "\\_train_samples\\{}_skin_mask.png".format(index), np.uint8(skinmask*255))
+            cv2.imwrite(self.saved_folder + "\\{}_full_shadow_img.png".format(index), cv2.cvtColor(np.uint8(full_shadow_img*255), cv2.COLOR_RGB2BGR))
+            cv2.imwrite(self.saved_folder + "\\{}_shadow_img.png".format(index), np.uint8(shadow_img*255))
+            cv2.imwrite(self.saved_folder + "\\{}_full_hand_img.png".format(index), cv2.cvtColor(np.uint8(full_hand_img*255), cv2.COLOR_RGB2BGR))
+            cv2.imwrite(self.saved_folder + "\\{}_hand_img.png".format(index), cv2.cvtColor(np.uint8(hand_img*255), cv2.COLOR_RGB2BGR))
+            cv2.imwrite(self.saved_folder + "\\{}_hand_mask.png".format(index), np.uint8(hand_mask*255))
+            cv2.imwrite(self.saved_folder + "\\{}_skin_mask.png".format(index), np.uint8(skinmask*255))
                         
         shadowfull_image = torch.from_numpy(full_shadow_img*2.0 -1.0)
         shadowmask_image = torch.from_numpy(shadow_img*2.0 -1.0)
@@ -300,7 +311,7 @@ class RawSyntheticDataset(BaseDataset):
         birdy['w'] = image_size[0]
         birdy['h'] = image_size[1]
 
-        birdy['shadowparams'] = torch.FloatTensor(np.array(shadow_param))
+        birdy['shadowparams'] = self.cudaTensor(np.array(shadow_param))
         birdy['skinmask'] = torch.permute(skinmask_image, (2, 0, 1))
         birdy['imgname'] = "img_{}.png".format(index_img)
         
