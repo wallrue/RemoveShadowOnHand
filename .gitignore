@@ -1,6 +1,6 @@
 _checkpoints/
 _database/
-_result/
+_result_set/
 _train_samples/
 .ipynb_checkpoints/
 **/.ipynb_checkpoints/
