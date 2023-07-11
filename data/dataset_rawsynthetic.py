@@ -152,7 +152,7 @@ class RawSyntheticDataset(BaseDataset):
 
     def shadow_validator(self, shadow_img, handmask_img):
         valid_score = np.sum(shadow_img)/ np.sum(handmask_img) 
-        return valid_score > 0.2 and valid_score < 0.8
+        return valid_score > 0.2 and valid_score < 0.65
     
     def concaten_hand(self, background, norm_mask, object_img): # Concatenate Hands to Background
         # Combine background and hand
