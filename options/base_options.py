@@ -45,9 +45,10 @@ class BaseOptions():
         parser.add_argument('--epoch', type=str, default='latest', help='which epoch to load? set to latest to use latest cached model')
         
         # Model training configuration
-        parser.add_argument('--gpu_ids', type=str, default='0', help='gpu ids: e.g. 0  0,1,2, 0,2. use -1 for CPU')
+        parser.add_argument('--gpu_ids', type=str, default='1', help='gpu ids: e.g. 0  0,1,2, 0,2. use -1 for CPU')
         parser.add_argument('--init_type', type=str, default='xavier', help='network initialization [normal|xavier|kaiming|orthogonal]')
         parser.add_argument('--init_gain', type=float, default=0.02, help='scaling factor for normal, xavier and orthogonal.')
+        parser.add_argument('--save_epoch_freq', type=int, default=2, help='periods of saving checkpoints')
 
         self.initialized = True
         return parser
@@ -57,10 +58,6 @@ class BaseOptions():
         parser.set_defaults(dataroot=self.data_root)
         parser.set_defaults(dataset_mode=self.dataset_mode) # This param will be modified in train.py
 
-        # Data transform argument        
-        parser.set_defaults(loadSize=256)
-        parser.set_defaults(fineSize=256) #fineSize is defined in each model file
-
         net_id_name = ""
         if len(self.net1_id) > 0 or len(self.net2_id) > 0:
             net_id_name = "_{}-{}".format(self.net1_id, self.net2_id)
@@ -68,12 +65,6 @@ class BaseOptions():
         parser.set_defaults(name=self.model_name + "_" + self.dataset_mode + net_id_name)
         parser.set_defaults(model=self.model_name)
         parser.set_defaults(checkpoints_dir=os.path.join(self.checkpoints_root,"checkpoints_" + self.model_name))
-        
-        # Training setup        
-        parser.set_defaults(gpu_ids='0')
-        parser.set_defaults(phase='train_')
-        parser.set_defaults(lr=0.02)
-        parser.set_defaults(save_epoch_freq=2)
 
         args, unknown = parser.parse_known_args()
         return args
@@ -117,7 +108,7 @@ class BaseOptions():
 
     def parse(self):
         opt = self.gather_options()
-        opt.model = self.model_name
+        #opt.model = self.model_name
         opt.isTrain = self.isTrain   # Train or test
 
         # Process opt.suffix
@@ -127,12 +118,15 @@ class BaseOptions():
         #self.print_options(opt)
  
         # Change gpu_ids from string_type to list_type
-        str_ids = opt.gpu_ids.split(',')
-        opt.gpu_ids = []
-        for str_id in range(torch.cuda.device_count()): # opt.gpu_ids is empty if no device exists
-            id = int(str_ids[str_id])
-            if id >= 0:
-                opt.gpu_ids.append(id)
+        if opt.gpu_ids == "all":
+            opt.gpu_ids = list(range(torch.cuda.device_count()))
+        else:
+            str_ids = opt.gpu_ids.split(',')
+            opt.gpu_ids = []
+            for device_id in str_ids:
+                device_id = int(device_id)
+                if device_id in range(torch.cuda.device_count()):
+                    opt.gpu_ids.append(device_id)
                 
         opt.netG, opt.netS, opt.netD, opt.net1_id, opt.net2_id = self.netG, self.netS, self.netD, self.net1_id, self.net2_id
             

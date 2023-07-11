@@ -21,8 +21,8 @@ class NTUSTHSDataset(BaseDataset):
     def initialize(self, opt):
         self.opt = opt
         self.root = opt.dataroot
-        self.dir_A = os.path.join(opt.dataroot, opt.phase + 'shadowfull')
-        self.dir_C = os.path.join(opt.dataroot, opt.phase + 'shadowfree')
+        self.dir_A = os.path.join(opt.dataroot, 'train_shadowfull')
+        self.dir_C = os.path.join(opt.dataroot, 'train_shadowfree')
         
         self.A_paths, self.imname = make_dataset(self.dir_A)
         self.A_size = len(self.A_paths)

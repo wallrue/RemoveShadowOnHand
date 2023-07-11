@@ -22,14 +22,14 @@ class ShadowSyntheticDataset(BaseDataset):
     def initialize(self, opt):
         self.opt = opt
         self.root = opt.dataroot
-        self.dir_shadowfull = os.path.join(opt.dataroot, opt.phase + 'shadowfull')
-        self.dir_shadowmask = os.path.join(opt.dataroot, opt.phase + 'shadowmask')
-        self.dir_shadowfree = os.path.join(opt.dataroot, opt.phase + 'shadowfree')
-        self.dir_shadowparams = os.path.join(opt.dataroot, opt.phase + 'shadowparams')
-        self.dir_handimg = os.path.join(opt.dataroot, opt.phase + 'handimg')
-        self.dir_handmask = os.path.join(opt.dataroot, opt.phase + 'handmask')
-        self.dir_handshaded = os.path.join(opt.dataroot, opt.phase + 'handshaded')
-        self.dir_handshadedless = os.path.join(opt.dataroot, opt.phase + 'handshadedless')
+        self.dir_shadowfull = os.path.join(opt.dataroot, 'train_shadowfull')
+        self.dir_shadowmask = os.path.join(opt.dataroot, 'train_shadowmask')
+        self.dir_shadowfree = os.path.join(opt.dataroot, 'train_shadowfree')
+        self.dir_shadowparams = os.path.join(opt.dataroot, 'train_shadowparams')
+        self.dir_handimg = os.path.join(opt.dataroot, 'train_handimg')
+        self.dir_handmask = os.path.join(opt.dataroot, 'train_handmask')
+        self.dir_handshaded = os.path.join(opt.dataroot, 'train_handshaded')
+        self.dir_handshadedless = os.path.join(opt.dataroot, 'train_handshadedless')
         
         self.img_paths, self.imname = make_dataset(self.dir_shadowfull)
         self.img_size = len(self.img_paths)

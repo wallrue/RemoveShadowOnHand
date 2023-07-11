@@ -20,10 +20,10 @@ class ShadowParamDataset(BaseDataset):
     def initialize(self, opt):
         self.opt = opt
         self.root = opt.dataroot
-        self.dir_A = os.path.join(opt.dataroot, opt.phase + 'shadowfull')
-        self.dir_B = os.path.join(opt.dataroot, opt.phase + 'shadowmask')
-        self.dir_C = os.path.join(opt.dataroot, opt.phase + 'shadowfree')
-        self.dir_param = os.path.join(opt.dataroot, opt.phase + 'shadowparams')
+        self.dir_A = os.path.join(opt.dataroot, 'train_shadowfull')
+        self.dir_B = os.path.join(opt.dataroot, 'train_shadowmask')
+        self.dir_C = os.path.join(opt.dataroot, 'train_shadowfree')
+        self.dir_param = os.path.join(opt.dataroot, 'train_shadowparams')
         
         self.A_paths, self.imname = make_dataset(self.dir_A)
         self.A_size = len(self.A_paths)

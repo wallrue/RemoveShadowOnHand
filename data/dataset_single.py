@@ -16,10 +16,10 @@ class SingleDataset(BaseDataset):
         return 'SingleImageDataset'
     
     def __init__(self, dataroot,opt):
-        self.opt = opt
-        self.dir_A = os.path.join(opt.dataroot, opt.phase + 'shadowfull')
-        self.dir_B = os.path.join(opt.dataroot, opt.phase + 'shadowmask')    
-
+        self.opt = opt  
+        self.dir_A = os.path.join(opt.dataroot, 'train_shadowfull')
+        self.dir_B = os.path.join(opt.dataroot, 'train_shadowmask')
+        
         self.A_paths, self.imname = make_dataset(self.dir_A)
         self.B_paths, _ = make_dataset(self.dir_B)
         

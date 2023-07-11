@@ -23,7 +23,7 @@ class TrainOptions(BaseOptions):
         parser.add_argument('--norm', type=str, default='instance', help='instance normalization or batch normalization')
         parser.add_argument('--no_dropout', action='store_true', help='no dropout for the generator')
         parser.add_argument('--beta1', type=float, default=0.5, help='momentum term of adam')
-        parser.add_argument('--lr', type=float, default=0.0002, help='initial learning rate for adam')
+        parser.add_argument('--lr', type=float, default=0.02, help='initial learning rate for adam')
         parser.add_argument('--lr_policy', type=str, default='lambda', help='learning rate policy: lambda|step|plateau|cosine')
         
         # Training process configuration

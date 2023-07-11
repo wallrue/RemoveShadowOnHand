@@ -107,8 +107,8 @@ def evaluate(dataset, test_model, result_dir, folder_name):
     
     path_list = [os.path.join(result_dir,"original"), 
                  os.path.join(result_dir,"groudtruth"),
-                 os.path.join(result_dir,"shadowmask_{folder_name}"),  
-                 os.path.join(result_dir,"shadowfree_{folder_name}")]
+                 os.path.join(result_dir,"shadowmask_{}".format(folder_name)),  
+                 os.path.join(result_dir,"shadowfree_{}".format(folder_name))]
     if not os.path.exists(result_dir):
         os.mkdir(result_dir)
     for path in path_list:
@@ -162,7 +162,7 @@ def evaluate(dataset, test_model, result_dir, folder_name):
             
             # Save output image after processing
             for idx, path in enumerate(path_list):
-                data_name = os.path.join(path,"{list_imgname[i]}")
+                data_name = os.path.join(path,"{}".format(list_imgname[i]))
                 if not os.path.isfile(data_name):
                     result_img = result_list[idx]
                     if len(np.shape(result_img)) == 3 and np.shape(result_img)[2] == 3:
@@ -183,12 +183,13 @@ if __name__=='__main__':
     Example of datasetname: shadowparam, shadowsynthetic, single
     Example of modelname: DSDSID, SIDSTGAN, STGAN
     """
-    checkpoint_dir = os.getcwd() + "\\_checkpoints\\"    
+    checkpoint_dir = os.path.join(os.getcwd(), "_checkpoints")      
     if not os.path.exists(checkpoint_dir):
         os.mkdir(checkpoint_dir)
     
     test_options = TestOptions()
     dataset_dir = {"NTUST_HS": os.path.join(os.path.join(os.getcwd(),"_database"),"NTUST_HS_Testset"),
+                   "rawsynthetic": os.path.join(os.path.join(os.getcwd(),"_database"),"data_creating"),
                    "shadowparam": os.path.join(os.path.join(os.getcwd(),"_database"),"NTUST_HS_SYNTHETIC"),
                    "shadowsynthetic": os.path.join(os.path.join(os.getcwd(),"_database"),"SYNTHETIC_HAND"),
                    }
