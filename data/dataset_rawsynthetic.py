@@ -119,7 +119,6 @@ class RawSyntheticDataset(BaseDataset):
     
     def initialize(self, opt):
         self.opt = opt
-        self.cudaTensor = torch.cuda.FloatTensor if len(self.opt.gpu_ids) > 0 else torch.FloatTensor
         self.root = opt.dataroot
         self.dir_shadowmask = os.path.join(opt.dataroot, 'shadow')
         self.dir_background = os.path.join(opt.dataroot, 'background\\val')
@@ -248,7 +247,7 @@ class RawSyntheticDataset(BaseDataset):
             background_img = (np.transpose(background.numpy(), (1,2,0)) + 1.0)/2.0 
             hand_img = background_img
             hand_norm = torch.ones((np.shape(background_img)[0], np.shape(background_img)[1], 1)).numpy()
-            hand_mask = self.cudaTensor(self.GetSkinMask(background_img)).numpy() 
+            hand_mask = torch.FloatTensor(self.GetSkinMask(background_img)).numpy() 
             
             background_mask = torch.ones((np.shape(background_img)[0], np.shape(background_img)[1], 1)).numpy()
             if np.sum(hand_mask)/ np.sum(background_mask) < 0.2:
@@ -311,7 +310,7 @@ class RawSyntheticDataset(BaseDataset):
         birdy['w'] = image_size[0]
         birdy['h'] = image_size[1]
 
-        birdy['shadowparams'] = self.cudaTensor(np.array(shadow_param))
+        birdy['shadowparams'] = torch.FloatTensor(np.array(shadow_param))
         birdy['skinmask'] = torch.permute(skinmask_image, (2, 0, 1))
         birdy['imgname'] = "img_{}.png".format(index_img)
         
