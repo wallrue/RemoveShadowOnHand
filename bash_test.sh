@@ -1,8 +1,9 @@
 #!/bin/bash
-#NOTE: Modify BACKBONE_TEST, training_dict, dataset_dir, checkpoints_dir in train.py to choose models to test
+#NOTE: Modify BACKBONE_TEST, training_dict. Then, if any, dataset_dir, checkpoints_dir in test.py to choose models to test
+gpu_ids='0'
 epoch_checkpoint_load='latest'
 batch_size=4
-gpu_ids='0' #not use gpu
+
 loadSize=256
 fineSize=256
 
