@@ -10,7 +10,7 @@ validDataset_split=0.0
 batch_size=8 #batch_size = 4 for DSD Net
 loadSize=256
 fineSize=256
-gpu_ids='0,1,2,3'
+gpu_ids='0'
 
 CMD="python train.py \
     --loadSize ${loadSize} \

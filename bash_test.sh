@@ -1,8 +1,8 @@
 #!/bin/bash
 #NOTE: Modify BACKBONE_TEST, training_dict, dataset_dir, checkpoints_dir in train.py to choose models to test
-epoch_checkpoint_load=120
+epoch_checkpoint_load='latest'
 batch_size=4
-gpu_ids='-1' #not use gpu
+gpu_ids='0' #not use gpu
 loadSize=256
 fineSize=256
 

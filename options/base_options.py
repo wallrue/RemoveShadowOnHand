@@ -72,7 +72,7 @@ class BaseOptions():
         # Training setup        
         parser.set_defaults(gpu_ids='0')
         parser.set_defaults(phase='train_')
-        parser.set_defaults(lr=0.0002)
+        parser.set_defaults(lr=0.02)
         parser.set_defaults(save_epoch_freq=2)
 
         args, unknown = parser.parse_known_args()

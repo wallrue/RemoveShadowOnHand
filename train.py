@@ -214,10 +214,10 @@ if __name__=='__main__':
         #training_dict = [[training_dataset, training_model, backbone, use_skinmask]]
         training_dict =[#["rawsynthetic",   "STGAN",            [[0, 0], [0, 0]], False],
                         #["rawsynthetic",   "SIDSTGAN",         [[0, 0], [5, 0]], False],
-                        #["rawsynthetic",   "SIDPAMIwISTGAN",   [[0, 0], [5, 0]], False],
-                        #["rawsynthetic",   "STGAN",            [[0, 0], [0, 0]], True],
-                        ["rawsynthetic",   "SIDSTGAN",         [[0, 0], [5, 0]], True],
-                        ["rawsynthetic",   "SIDPAMIwISTGAN",   [[0, 0], [5, 0]], True],
+                        ["rawsynthetic",   "SIDPAMIwISTGAN",   [[0, 0], [5, 0]], False],
+                        ["rawsynthetic",   "STGAN",            [[0, 0], [0, 0]], True],
+                        # ["rawsynthetic",   "SIDSTGAN",         [[0, 0], [5, 0]], True],
+                        # ["rawsynthetic",   "SIDPAMIwISTGAN",   [[0, 0], [5, 0]], True],
                         
                         # ["shadowparam",   "STGAN",            [[0, 0], [0, 0]], False],
                         # ["shadowparam",   "SIDSTGAN",         [[0, 0], [5, 0]], False],
