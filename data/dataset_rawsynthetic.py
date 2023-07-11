@@ -243,8 +243,10 @@ class RawSyntheticDataset(BaseDataset):
             background_img = (np.transpose(background.numpy(), (1,2,0)) + 1.0)/2.0 
             hand_img = background_img
             hand_norm = torch.ones((np.shape(background_img)[0], np.shape(background_img)[1], 1)).numpy()
-            hand_mask = torch.FloatTensor(self.GetSkinMask(background_img)).numpy() #torch.ones((np.shape(background_img)[0], np.shape(background_img)[1], 1)).numpy()
-            assert np.sum(hand_mask) > 0, "hand_mask should be not empty"
+            hand_mask = torch.FloatTensor(self.GetSkinMask(background_img)).numpy() 
+            if np.sum(hand_mask) < (np.shape(background_img)[0]*np.shape(background_img)[1]*0.2):
+                #If we can not detect hand mask, we will not filter shadow inside hand palm
+                torch.ones((np.shape(background_img)[0], np.shape(background_img)[1], 1)).numpy()
             
         # Create shadow mask on hand
         if self.using_generated_shadow: #using
