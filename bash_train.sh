@@ -18,6 +18,7 @@ CMD="python train.py \
     --fineSize ${fineSize} \
     --batch_size ${batch_size} \
     --gpu_ids ${gpu_ids} \
+    --save_epoch_freq ${save_epoch_freq} \
     --validDataset_split ${validDataset_split}\
     --niter ${niter} \
     --niter_decay ${niter_decay} \
@@ -46,6 +47,7 @@ do
         --fineSize ${fineSize} \
         --batch_size ${batch_size} \
         --gpu_ids ${gpu_ids} \
+        --save_epoch_freq ${save_epoch_freq} \
         --validDataset_split ${validDataset_split}\
         --niter ${niter} \
         --niter_decay ${niter_decay} \
