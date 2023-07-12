@@ -4,9 +4,9 @@ gpu_ids='0'
 num_threads=2
 continue_train=false
 epoch_count_start=1
-epoch_checkpoint_load=$((epoch_count_start - 1))
+epoch_checkpoint_load=20
+niter=10
 niter_decay=10
-niter=$((epoch_count_start - 1 + niter_decay))
 batch_size=8 #batch_size = 4 for DSD Net
 save_epoch_freq=2
 
