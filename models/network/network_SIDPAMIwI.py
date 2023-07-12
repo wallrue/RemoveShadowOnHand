@@ -21,6 +21,14 @@ class SIDPAMIwINet(nn.Module):
                                       not opt.no_dropout, opt.init_type, opt.init_gain, [])
         self.netI = define_G(6 + 1 + opt.use_skinmask, 3, opt.ngf, net_i, opt.norm,
                                       not opt.no_dropout, opt.init_type, opt.init_gain, [])
+        
+        device = torch.device('cuda:{}'.format(opt.gpu_ids[0])) if len(opt.gpu_ids)>0 else torch.device('cpu')
+        self.netG.to(device)
+        self.netM.to(device)
+        self.netI.to(device)
+        self.netG = torch.nn.DataParallel(self.netG, opt.gpu_ids) if len(opt.gpu_ids)>0 else self.netG
+        self.netM = torch.nn.DataParallel(self.netM, opt.gpu_ids) if len(opt.gpu_ids)>0 else self.netM
+        self.netI = torch.nn.DataParallel(self.netI, opt.gpu_ids) if len(opt.gpu_ids)>0 else self.netI
 
     def forward(self, input_img, fake_shadow_image):
         self.input_img = F.interpolate(input_img,size=(256,256))
@@ -66,6 +74,4 @@ class SIDPAMIwINet(nn.Module):
 
 def define_SIDPAMIwINet(opt, net_g = 'RESNEXT', net_m = 'unet_256', net_i = 'unet_256'):
     net = SIDPAMIwINet(opt, net_g, net_m, net_i)
-    device = torch.device('cuda:{}'.format(opt.gpu_ids[0])) if len(opt.gpu_ids)>0 else torch.device('cpu')
-    net.to(device)
-    return torch.nn.DataParallel(net, opt.gpu_ids) if len(opt.gpu_ids)>0 else net
+    return net

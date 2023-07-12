@@ -20,6 +20,12 @@ class SIDNet(nn.Module):
         self.netM = define_G(6 + 1 + opt.use_skinmask, opt.output_nc, opt.ngf, net_m, opt.norm,
                                       not opt.no_dropout, opt.init_type, opt.init_gain, [])
 
+        device = torch.device('cuda:{}'.format(opt.gpu_ids[0])) if len(opt.gpu_ids)>0 else torch.device('cpu')
+        self.netG.to(device)
+        self.netM.to(device)
+        self.netG = torch.nn.DataParallel(self.netG, opt.gpu_ids) if len(opt.gpu_ids)>0 else self.netG
+        self.netM = torch.nn.DataParallel(self.netM, opt.gpu_ids) if len(opt.gpu_ids)>0 else self.netM
+
     def forward(self, input_img, fake_shadow_image):
         self.input_img = F.interpolate(input_img,size=(256,256))
         self.fake_shadow_image = F.interpolate(fake_shadow_image,size=(256,256))
@@ -56,6 +62,4 @@ class SIDNet(nn.Module):
 
 def define_SID(opt, net_g = 'RESNEXT', net_m = 'unet_256'):
     net = SIDNet(opt, net_g, net_m)
-    device = torch.device('cuda:{}'.format(opt.gpu_ids[0])) if len(opt.gpu_ids)>0 else torch.device('cpu')
-    net.to(device)
-    return torch.nn.DataParallel(net, opt.gpu_ids) if len(opt.gpu_ids)>0 else net
+    return net
