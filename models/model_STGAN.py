@@ -52,20 +52,20 @@ class STGANModel(BaseModel):
     def forward(self):
         # Compute output of generator 1
         self.inputSTGAN1 = torch.cat((self.input_img, self.skin_mask), 1) if self.opt.use_skinmask else self.input_img
-        self.fake_shadow_image = self.netSTGAN1.forward_G(self.set_gpu_data(self.inputSTGAN1))
+        self.fake_shadow_image = self.netSTGAN1.forward_G(self.inputSTGAN1)
         
         # Compute output of generator 2
         self.inputSTGAN2 = torch.cat((self.input_img, self.fake_shadow_image, self.skin_mask), 1) if self.opt.use_skinmask else torch.cat((self.input_img, self.fake_shadow_image), 1)
-        self.fake_free_shadow_image = self.netSTGAN2.forward_G(self.set_gpu_data(self.inputSTGAN2))
+        self.fake_free_shadow_image = self.netSTGAN2.forward_G(self.inputSTGAN2)
 
     def forward_D(self):
         fake_AB = torch.cat((self.inputSTGAN1, self.fake_shadow_image), 1)
         real_AB = torch.cat((self.inputSTGAN1, self.shadow_mask), 1)                                                            
-        self.pred_fake, self.pred_real = self.netSTGAN1.forward_D(self.set_gpu_data(fake_AB.detach()), self.set_gpu_data(real_AB))
+        self.pred_fake, self.pred_real = self.netSTGAN1.forward_D(fake_AB.detach(), real_AB)
                                                          
         fake_ABC = torch.cat((fake_AB, self.fake_free_shadow_image), 1)
         real_ABC = torch.cat((real_AB, self.shadowfree_img), 1)                                                   
-        self.pred_fake2, self.pred_real2 = self.netSTGAN2.forward_D(self.set_gpu_data(fake_ABC.detach()), self.set_gpu_data(real_ABC))
+        self.pred_fake2, self.pred_real2 = self.netSTGAN2.forward_D(fake_ABC.detach(), real_ABC)
         
     def backward_D(self):        
         self.loss_D1_fake = self.GAN_loss(self.pred_fake, target_is_real = 0) 

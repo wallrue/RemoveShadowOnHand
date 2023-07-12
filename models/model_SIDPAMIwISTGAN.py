@@ -54,21 +54,21 @@ class SIDPAMIwISTGANModel(BaseModel):
    
     def set_input(self, input):
         BaseModel.set_input(self, input)
-        self.shadow_param = self.set_gpu_data(input['shadowparams']).type(torch.float)
+        self.shadow_param = self.convert_tensor_type(input['shadowparams'])
         
     def forward(self):
         # Compute output of generator 1
         self.inputNet1 = torch.cat((self.input_img, self.skin_mask), 1) if self.opt.use_skinmask else self.input_img
-        self.fake_shadow_image = self.netG1.forward_G(self.set_gpu_data(self.inputNet1))
+        self.fake_shadow_image = self.netG1.forward_G(self.inputNet1)
 
         # Compute output of generator 2
         self.compounded_shadow = torch.cat((self.fake_shadow_image, self.skin_mask), 1) if self.opt.use_skinmask else self.fake_shadow_image 
-        self.shadow_param_pred, self.alpha_pred, self.fake_free_shadow_image, self.fake_free_shadow_image_I = self.netG2(self.set_gpu_data(self.input_img), self.set_gpu_data(self.compounded_shadow))
+        self.shadow_param_pred, self.alpha_pred, self.fake_free_shadow_image, self.fake_free_shadow_image_I = self.netG2(self.input_img, self.compounded_shadow)
                 
     def forward_D(self):
         fake_AB = torch.cat((self.inputNet1, self.fake_shadow_image), 1)
         real_AB = torch.cat((self.inputNet1, self.shadow_mask), 1)                                                            
-        self.pred_fake, self.pred_real = self.netG1.forward_D(self.set_gpu_data(fake_AB.detach()), self.set_gpu_data(real_AB))
+        self.pred_fake, self.pred_real = self.netG1.forward_D(fake_AB.detach(), real_AB)
         
     def backward_D(self):      
         self.loss_D1_fake = self.GAN_loss(self.pred_fake, target_is_real = 0) 
