@@ -16,13 +16,12 @@ class BaseModel():
     @staticmethod
     def modify_commandline_options(parser, is_train):
         return parser
-                
+
     def initialize(self, opt):
         self.opt = opt
         self.gpu_ids = opt.gpu_ids
         self.isTrain = opt.isTrain
-        self.device = torch.device('cuda:{}'.format(opt.gpu_ids[0])) if len(opt.gpu_ids)>0 else torch.device('cpu')
-        
+        #self.device = torch.device('cuda:{}'.format(opt.gpu_ids[0])) if len(opt.gpu_ids)>0 else torch.device('cpu')
         self.save_dir = os.path.join(opt.checkpoints_dir, opt.name)
         
         # When model doesn't vary, we set torch.backends.cudnn.benchmark to get the benefit 
@@ -32,28 +31,29 @@ class BaseModel():
         self.loss_names = []
         self.model_names = []
         self.image_paths = []
-
+          
+    def set_gpu_data(self, net):
+        device = torch.device('cuda:{}'.format(self.opt.gpu_ids[0])) if len(self.opt.gpu_ids)>0 else torch.device('cpu')
+        net.to(device)
+        return torch.nn.DataParallel(net, self.opt.gpu_ids) if len(self.opt.gpu_ids)>0 else net
+            
     def set_input(self, input):
-        self.input_img = input['A'].to(self.device)
-        self.shadow_mask = input['B'].to(self.device)
-        self.shadow_mask = (self.shadow_mask>0.9).type(torch.float)*2-1
-        self.shadowfree_img = input['C'].to(self.device)
-        
-        self.nim = self.input_img.shape[1]
-        self.shadow_mask_3d= (self.shadow_mask>0).type(torch.float).expand(self.input_img.shape)   
+        self.input_img = self.set_gpu_data(input['shadowfull'])
+        self.shadow_mask = (self.set_gpu_data(input['shadowmask']) >0).type(torch.float)*2-1
+        self.shadowfree_img = self.set_gpu_data(input['shadowfree'])
+        self.skin_mask = (self.set_gpu_data(input['skinmask']) >0).type(torch.float)*2-1 if self.opt.use_skinmask else None 
     
     def forward(self):
         pass
     
-    def get_prediction(self, input):
-        self.input_img = input['A'].to(self.device)
-        self.shadow_mask = input['B'].to(self.device)
-        self.shadow_mask = (self.shadow_mask>0.9).type(torch.float)*2-1
-        self.shadow_mask_3d = (self.shadow_mask>0).type(torch.float).expand(self.inputmg.shape)   
-        
-        inputG = torch.cat([self.input_img,self.shadow_mask],1)
-        out = self.netG(inputG)
-        return util.tensor2im(out)
+    def get_prediction(self, input_img, skin_mask = None):
+        self.input_img = self.set_gpu_data(input_img)
+        self.skin_mask = self.set_gpu_data(skin_mask) if skin_mask != None else skin_mask
+        self.forward()
+
+        self.result = dict()
+        self.result['final']= self.fake_free_shadow_image
+        self.result['phase1'] = self.fake_shadow_image 
 
     # Load and print networks; create schedulers
     def setup(self, opt, parser=None):
@@ -124,7 +124,8 @@ class BaseModel():
             #    net = net.module             
             # Loading state dict
             print('loading the model from %s' % load_path)
-            state_dict = torch.load(load_path, map_location=str(self.device))
+            device = torch.device('cuda:{}'.format(self.opt.gpu_ids[0])) if len(self.opt.gpu_ids)>0 else torch.device('cpu')
+            state_dict = torch.load(load_path, map_location=str(device))
             if hasattr(state_dict, '_metadata'):
                 del state_dict._metadata
             
@@ -132,6 +133,7 @@ class BaseModel():
             for key in list(state_dict.keys()):
                 self.__patch_instance_norm_state_dict(state_dict, net, key.split('.'))
             net.load_state_dict(state_dict)
+            net = torch.nn.DataParallel(net, self.opt.gpu_ids) if len(self.opt.gpu_ids)>0 else net
                 
     # Print network information
     def print_networks(self, opt):

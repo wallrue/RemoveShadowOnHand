@@ -3,6 +3,7 @@
 # get_option_setter, ... which is used to create the model for training
 ###############################################################################
 
+import torch
 import importlib
 from models.base_model import BaseModel
 

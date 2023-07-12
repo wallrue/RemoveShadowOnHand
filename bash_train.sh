@@ -4,8 +4,8 @@ gpu_ids='0'
 continue_train=false
 epoch_count_start=1
 epoch_checkpoint_load=$((epoch_count_start - 1))
-niter=10
-niter_decay=10
+niter=1
+niter_decay=1
 batch_size=8 #batch_size = 4 for DSD Net
 save_epoch_freq=2
 
@@ -36,7 +36,7 @@ fi
 
 echo $c
 eval $c
-for VARIABLE in 1 2 3 4
+for VARIABLE in 1 #2 3 4
 do
     epoch_checkpoint_load=$((niter + niter_decay))
     epoch_count_start=$((niter + niter_decay + 1))

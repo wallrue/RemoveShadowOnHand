@@ -55,10 +55,7 @@ class SIDNet(nn.Module):
         return self.shadow_param_pred, self.alpha_pred, self.final
 
 def define_SID(opt, net_g = 'RESNEXT', net_m = 'unet_256'):
-    net = None
     net = SIDNet(opt, net_g, net_m)
-    if len(opt.gpu_ids)>0:
-        assert(torch.cuda.is_available())
-        net.to(opt.gpu_ids[0])
-        net = torch.nn.DataParallel(net, opt.gpu_ids)
-    return net
+    device = torch.device('cuda:{}'.format(opt.gpu_ids[0])) if len(opt.gpu_ids)>0 else torch.device('cpu')
+    net.to(device)
+    return torch.nn.DataParallel(net.to(device), opt.gpu_ids) if len(opt.gpu_ids)>0 else net

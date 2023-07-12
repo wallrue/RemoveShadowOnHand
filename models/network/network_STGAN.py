@@ -31,9 +31,8 @@ class STGANNet(nn.Module):
       
 def define_STGAN(opt, gan_input_nc, gan_output_nc, net_g = 'unet_32', net_d = 'n_layers'):
     net = STGANNet(opt, gan_input_nc, gan_output_nc, net_g, net_d)
-    if len(opt.gpu_ids)>0:
-        assert(torch.cuda.is_available())
-        net.to(opt.gpu_ids[0])
-        net = torch.nn.DataParallel(net, opt.gpu_ids)
-    return net
+    
+    device = torch.device('cuda:{}'.format(opt.gpu_ids[0])) if len(opt.gpu_ids)>0 else torch.device('cpu')
+    net.to(device)
+    return torch.nn.DataParallel(net.to(device), opt.gpu_ids) if len(opt.gpu_ids)>0 else net
 

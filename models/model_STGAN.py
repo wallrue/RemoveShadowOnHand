@@ -22,8 +22,6 @@ class STGANModel(BaseModel):
 
     def initialize(self, opt):
         BaseModel.initialize(self, opt)
-        self.opt = opt
-        self.isTrain = self.opt.isTrain
         self.loss_names = ['G1_GAN', 'G1_L1', 'G2_GAN', 'G2_L1',
                            'D1_real', 'D1_fake', 'D2_real', 'D2_fake']
         self.model_names = ['STGAN1', 'STGAN2']
@@ -49,10 +47,7 @@ class STGANModel(BaseModel):
             self.optimizers = [self.optimizer_G1, self.optimizer_G2, self.optimizer_D]
    
     def set_input(self, input):
-        self.input_img = input['shadowfull'].to(self.device)
-        self.shadow_mask = (input['shadowmask'].to(self.device) >0).type(torch.float)*2-1
-        self.shadowfree_img = input['shadowfree'].to(self.device)
-        self.skin_mask = (input['skinmask'].to(self.device) >0).type(torch.float)*2-1 if self.opt.use_skinmask else None
+        BaseModel.set_input(self, input)    
     
     def forward(self):
         # Compute output of generator 1
@@ -95,16 +90,10 @@ class STGANModel(BaseModel):
         
         self.loss_G2 = self.loss_G2_GAN + self.loss_G2_L1*0.1
         self.loss_G2.backward(retain_graph=True)
-
+        
     def get_prediction(self, input_img, skin_mask = None):
-        self.input_img = input_img.to(self.device)
-        self.skin_mask = skin_mask.to(self.device) if skin_mask != None else skin_mask
-        self.forward()
-
-        RES = dict()
-        RES['final']= self.fake_free_shadow_image
-        RES['phase1'] = self.fake_shadow_image 
-        return  RES
+        BaseModel.get_prediction(self, input_img, skin_mask)
+        return self.result
     
     def optimize_parameters(self):
         self.forward()
