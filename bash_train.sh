@@ -5,8 +5,8 @@ num_threads=2
 continue_train=false
 epoch_count_start=1
 epoch_checkpoint_load=$((epoch_count_start - 1))
-niter=1
-niter_decay=1
+niter_decay=10
+niter=$((epoch_count_start - 1 + niter_decay))
 batch_size=8 #batch_size = 4 for DSD Net
 save_epoch_freq=2
 
@@ -42,8 +42,8 @@ for VARIABLE in 1 #2 3 4
 do
     epoch_checkpoint_load=$((niter + niter_decay))
     epoch_count_start=$((niter + niter_decay + 1))
-    niter=$((niter + niter_decay + niter_decay))
     niter_decay=$((niter_decay + 0))
+    niter=$((niter + niter_decay + niter_decay))
     CMD="python train.py \
         --loadSize ${loadSize} \
         --fineSize ${fineSize} \
