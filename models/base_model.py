@@ -35,7 +35,7 @@ class BaseModel():
     def set_gpu_data(self, net):
         device = torch.device('cuda:{}'.format(self.opt.gpu_ids[0])) if len(self.opt.gpu_ids)>0 else torch.device('cpu')
         net.to(device)
-        return torch.nn.DataParallel(net, self.opt.gpu_ids) if len(self.opt.gpu_ids)>0 else net
+        return net #if len(self.opt.gpu_ids)>0 else torch.nn.DataParallel(net, self.opt.gpu_ids) 
             
     def set_input(self, input):
         self.input_img = self.set_gpu_data(input['shadowfull'])
