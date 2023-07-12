@@ -35,11 +35,6 @@ class BaseModel():
     def convert_tensor_type(self, data):     
         cuda_tensor = torch.cuda.FloatTensor if len(self.opt.gpu_ids) > 0 else torch.FloatTensor
         return data.type(cuda_tensor)
-    
-    def set_gpu_data(self, data):
-        device = torch.device('cuda:{}'.format(self.opt.gpu_ids[0])) if len(self.opt.gpu_ids)>0 else torch.device('cpu')
-        data.to(device)
-        return torch.nn.DataParallel(data, self.opt.gpu_ids) if len(self.opt.gpu_ids)>0 else data  
             
     def set_input(self, input):
         self.input_img = self.convert_tensor_type(input['shadowfull'])
