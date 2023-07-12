@@ -66,6 +66,7 @@ class SIDPAMIwINet(nn.Module):
 
 def define_SIDPAMIwINet(opt, net_g = 'RESNEXT', net_m = 'unet_256', net_i = 'unet_256'):
     net = SIDPAMIwINet(opt, net_g, net_m, net_i)
-    device = torch.device('cuda:{}'.format(opt.gpu_ids[0])) if len(opt.gpu_ids)>0 else torch.device('cpu')
-    net.to(device)
-    return torch.nn.DataParallel(net, opt.gpu_ids) if len(opt.gpu_ids)>0 else net
+    # device = torch.device('cuda:{}'.format(opt.gpu_ids[0])) if len(opt.gpu_ids)>0 else torch.device('cpu')
+    # net.to(device)
+    # return torch.nn.DataParallel(net, opt.gpu_ids) if len(opt.gpu_ids)>0 else net
+    return net
