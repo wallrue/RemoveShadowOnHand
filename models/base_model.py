@@ -33,10 +33,10 @@ class BaseModel():
         self.image_paths = []
           
     def set_gpu_data(self, data):
-        #cuda_tensor = torch.cuda.FloatTensor if len(self.opt.gpu_ids) > 0 else torch.FloatTensor
-        device = torch.device('cuda:{}'.format(self.opt.gpu_ids[0])) if len(self.opt.gpu_ids)>0 else torch.device('cpu')
-        data.to(device)
-        return data if len(self.opt.gpu_ids)==0 else torch.nn.DataParallel(data, self.opt.gpu_ids) 
+        cuda_tensor = torch.cuda.FloatTensor if len(self.opt.gpu_ids) > 0 else torch.FloatTensor
+        #device = torch.device('cuda:{}'.format(self.opt.gpu_ids[0])) if len(self.opt.gpu_ids)>0 else torch.device('cpu')
+        #data.to(device)
+        return data.type(cuda_tensor) if len(self.opt.gpu_ids)==0 else torch.nn.DataParallel(data.type(cuda_tensor), self.opt.gpu_ids) 
             
     def set_input(self, input):
         self.input_img = self.set_gpu_data(input['shadowfull'])
