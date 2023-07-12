@@ -33,15 +33,16 @@ class BaseModel():
         self.image_paths = []
           
     def set_gpu_data(self, data):
-        #device = torch.device('cuda:{}'.format(self.opt.gpu_ids[0])) if len(self.opt.gpu_ids)>0 else torch.device('cpu')
-        cuda_tensor = torch.cuda.FloatTensor if len(self.opt.gpu_ids) > 0 else torch.FloatTensor
-        return data.type(cuda_tensor) #net if len(self.opt.gpu_ids)<=0 else torch.nn.DataParallel(net, self.opt.gpu_ids) 
+        #cuda_tensor = torch.cuda.FloatTensor if len(self.opt.gpu_ids) > 0 else torch.FloatTensor
+        device = torch.device('cuda:{}'.format(self.opt.gpu_ids[0])) if len(self.opt.gpu_ids)>0 else torch.device('cpu')
+        data.to(device)
+        return data if len(self.opt.gpu_ids)==0 else torch.nn.DataParallel(data, self.opt.gpu_ids) 
             
     def set_input(self, input):
         self.input_img = self.set_gpu_data(input['shadowfull'])
-        self.shadow_mask = torch.round((self.set_gpu_data(input['shadowmask'])+1.0)/2)*2-1
+        self.shadow_mask = self.set_gpu_data(torch.round((input['shadowmask']+1.0)/2)*2-1)
         self.shadowfree_img = self.set_gpu_data(input['shadowfree'])
-        self.skin_mask = torch.round((self.set_gpu_data(input['shadowmask'])+1.0)/2)*2-1 if self.opt.use_skinmask else None 
+        self.skin_mask = self.set_gpu_data(torch.round((input['skinmask']+1.0)/2)*2-1) if self.opt.use_skinmask else None 
     
     def forward(self):
         pass

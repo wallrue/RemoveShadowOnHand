@@ -261,11 +261,6 @@ if __name__=='__main__':
         # Model defination
         model = create_model(opt)
         model.setup(opt)
-        
-        if len(opt.gpu_ids)>0:
-            device = torch.device('cuda:{}'.format(opt.gpu_ids[0]))
-            model.to(device)
-            model = torch.nn.DataParallel(model, opt.gpu_ids)
     
         # Training
         train_loop(opt, model) #dataset, model)

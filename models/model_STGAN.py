@@ -29,8 +29,8 @@ class STGANModel(BaseModel):
         self.netSTGAN1 = network_STGAN.define_STGAN(opt, 3 + self.opt.use_skinmask, 1, net_g = opt.netG[opt.net1_id[0]], net_d = opt.netD[opt.net1_id[1]])
         self.netSTGAN2 = network_STGAN.define_STGAN(opt, 4 + self.opt.use_skinmask, 3, net_g = opt.netG[opt.net2_id[0]], net_d = opt.netD[opt.net2_id[1]])
         
-        # self.netSTGAN1 = self.netSTGAN1.module if len(opt.gpu_ids) > 0 else self.netSTGAN1
-        # self.netSTGAN2 = self.netSTGAN2.module if len(opt.gpu_ids) > 0 else self.netSTGAN2
+        self.netSTGAN1 = self.netSTGAN1.module if len(opt.gpu_ids) > 0 else self.netSTGAN1
+        self.netSTGAN2 = self.netSTGAN2.module if len(opt.gpu_ids) > 0 else self.netSTGAN2
         
         if self.isTrain:
             self.criterionL1 = torch.nn.L1Loss()
