@@ -31,25 +31,28 @@ class BaseModel():
         self.loss_names = []
         self.model_names = []
         self.image_paths = []
-          
-    def set_gpu_data(self, data):
+   
+    def convert_tensor_type(self, data):     
         cuda_tensor = torch.cuda.FloatTensor if len(self.opt.gpu_ids) > 0 else torch.FloatTensor
-        #device = torch.device('cuda:{}'.format(self.opt.gpu_ids[0])) if len(self.opt.gpu_ids)>0 else torch.device('cpu')
-        #data.to(device)
-        return data.type(cuda_tensor) if len(self.opt.gpu_ids)==0 else torch.nn.DataParallel(data.type(cuda_tensor), self.opt.gpu_ids) 
+        return data.type(cuda_tensor)
+    
+    def set_gpu_data(self, data):
+        device = torch.device('cuda:{}'.format(self.opt.gpu_ids[0])) if len(self.opt.gpu_ids)>0 else torch.device('cpu')
+        data.to(device)
+        return torch.nn.DataParallel(data, self.opt.gpu_ids) if len(self.opt.gpu_ids)>0 else data  
             
     def set_input(self, input):
-        self.input_img = self.set_gpu_data(input['shadowfull'])
-        self.shadow_mask = self.set_gpu_data(torch.round((input['shadowmask']+1.0)/2)*2-1)
-        self.shadowfree_img = self.set_gpu_data(input['shadowfree'])
-        self.skin_mask = self.set_gpu_data(torch.round((input['skinmask']+1.0)/2)*2-1) if self.opt.use_skinmask else None 
+        self.input_img = self.convert_tensor_type(input['shadowfull'])
+        self.shadow_mask = self.convert_tensor_type(torch.round((input['shadowmask']+1.0)/2)*2-1)
+        self.shadowfree_img = self.convert_tensor_type(input['shadowfree'])
+        self.skin_mask = self.convert_tensor_type(torch.round((input['skinmask']+1.0)/2)*2-1) if self.opt.use_skinmask else None 
     
     def forward(self):
         pass
     
     def get_prediction(self, input_img, skin_mask = None):
-        self.input_img = self.set_gpu_data(input_img)
-        self.skin_mask = self.set_gpu_data(skin_mask) if skin_mask != None else skin_mask
+        self.input_img = self.convert_tensor_type(input_img)
+        self.skin_mask = self.convert_tensor_type(skin_mask) if skin_mask != None else skin_mask
         self.forward()
 
         self.result = dict()
