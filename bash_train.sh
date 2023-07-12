@@ -7,6 +7,7 @@ epoch_checkpoint_load=$((epoch_count_start - 1))
 niter=10
 niter_decay=10
 batch_size=8 #batch_size = 4 for DSD Net
+save_epoch_freq = 2
 
 loadSize=256
 fineSize=256
