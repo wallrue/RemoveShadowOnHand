@@ -39,9 +39,9 @@ class BaseModel():
             
     def set_input(self, input):
         self.input_img = self.set_gpu_data(input['shadowfull'])
-        self.shadow_mask = (self.set_gpu_data(input['shadowmask']) >0).type(torch.float)*2-1
+        self.shadow_mask = torch.round((self.set_gpu_data(input['shadowmask'])+1.0)/2)*2-1
         self.shadowfree_img = self.set_gpu_data(input['shadowfree'])
-        self.skin_mask = (self.set_gpu_data(input['skinmask']) >0).type(torch.float)*2-1 if self.opt.use_skinmask else None 
+        self.skin_mask = torch.round((self.set_gpu_data(input['shadowmask'])+1.0)/2)*2-1 if self.opt.use_skinmask else None 
     
     def forward(self):
         pass
