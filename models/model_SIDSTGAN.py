@@ -31,8 +31,8 @@ class SIDSTGANModel(BaseModel):
         self.netG1 = network_STGAN.define_STGAN(opt, 3 + self.opt.use_skinmask, 1, net_g = opt.netG[opt.net1_id[0]], net_d = opt.netD[opt.net1_id[1]])
         self.netG2 = define_SID(opt, net_g = opt.netS[opt.net2_id[0]], net_m = opt.netG[opt.net2_id[1]])
         
-        self.netG1 = self.netG1.module if len(opt.gpu_ids) > 0 else self.netG1
-        self.netG2 = self.netG2.module if len(opt.gpu_ids) > 0 else self.netG2
+        # self.netG1 = self.netG1.module if len(opt.gpu_ids) > 0 else self.netG1
+        # self.netG2 = self.netG2.module if len(opt.gpu_ids) > 0 else self.netG2
         
         if self.isTrain:
             # Define loss functions
