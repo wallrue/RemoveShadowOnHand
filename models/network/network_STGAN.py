@@ -14,9 +14,9 @@ class STGANNet(nn.Module):
     def __init__(self, opt, gan_input_nc, gan_output_nc, net_g, net_d):
         super(STGANNet, self).__init__()
         self.netG = define_G(gan_input_nc, gan_output_nc, opt.ngf, net_g, opt.norm,
-                                      not opt.no_dropout, opt.init_type, opt.init_gain, opt.gpu_ids)
+                                      not opt.no_dropout, opt.init_type, opt.init_gain, [])
         self.netD = define_D(gan_input_nc+gan_output_nc, opt.ngf, net_d, 3, opt.norm, 
-                                         True, opt.init_type, opt.init_gain, opt.gpu_ids)
+                                         True, opt.init_type, opt.init_gain, [])
         
         self.GAN_loss = GANLoss(opt.gpu_ids)
         self.criterionL1 = torch.nn.L1Loss().to(1)
@@ -32,5 +32,9 @@ class STGANNet(nn.Module):
       
 def define_STGAN(opt, gan_input_nc, gan_output_nc, net_g = 'unet_32', net_d = 'n_layers'):
     net = STGANNet(opt, gan_input_nc, gan_output_nc, net_g, net_d)
-    return net 
+    if len(opt.gpu_ids)>0:
+        assert(torch.cuda.is_available())
+        net.to(opt.gpu_ids[0])
+        net = torch.nn.DataParallel(net, opt.gpu_ids)
+    return net
 
