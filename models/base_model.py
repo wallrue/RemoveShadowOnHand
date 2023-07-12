@@ -132,7 +132,6 @@ class BaseModel():
             for key in list(state_dict.keys()):
                 self.__patch_instance_norm_state_dict(state_dict, net, key.split('.'))
             net.load_state_dict(state_dict)
-            net = torch.nn.DataParallel(net, self.opt.gpu_ids) if len(self.opt.gpu_ids)>0 else net
                 
     # Print network information
     def print_networks(self, opt):
