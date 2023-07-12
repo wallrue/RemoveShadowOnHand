@@ -127,7 +127,6 @@ class BaseOptions():
                 device_id = int(device_id)
                 if device_id in range(torch.cuda.device_count()):
                     opt.gpu_ids.append(device_id)
-        opt.num_threads = 1 if len(opt.gpu_ids) == 0 else len(opt.gpu_ids)
         opt.netG, opt.netS, opt.netD, opt.net1_id, opt.net2_id = self.netG, self.netS, self.netD, self.net1_id, self.net2_id
             
         self.opt = opt

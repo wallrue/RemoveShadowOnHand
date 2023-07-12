@@ -1,6 +1,7 @@
 #!/bin/bash
 #NOTE: Modify BACKBONE_TEST, training_dict. Then, if any, dataset_dir, checkpoints_dir in train.py to choose the type of experiment and models to train
 gpu_ids='0'
+num_threads=2
 continue_train=false
 epoch_count_start=1
 epoch_checkpoint_load=$((epoch_count_start - 1))
@@ -18,6 +19,7 @@ CMD="python train.py \
     --fineSize ${fineSize} \
     --batch_size ${batch_size} \
     --gpu_ids ${gpu_ids} \
+    --num_threads ${num_threads} \
     --save_epoch_freq ${save_epoch_freq} \
     --validDataset_split ${validDataset_split}\
     --niter ${niter} \
@@ -47,6 +49,7 @@ do
         --fineSize ${fineSize} \
         --batch_size ${batch_size} \
         --gpu_ids ${gpu_ids} \
+        --num_threads ${num_threads} \
         --save_epoch_freq ${save_epoch_freq} \
         --validDataset_split ${validDataset_split}\
         --niter ${niter} \
