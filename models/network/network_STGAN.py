@@ -34,5 +34,5 @@ def define_STGAN(opt, gan_input_nc, gan_output_nc, net_g = 'unet_32', net_d = 'n
     
     device = torch.device('cuda:{}'.format(opt.gpu_ids[0])) if len(opt.gpu_ids)>0 else torch.device('cpu')
     net.to(device)
-    return torch.nn.DataParallel(net.to(device), opt.gpu_ids) if len(opt.gpu_ids)>0 else net
+    return torch.nn.DataParallel(net, opt.gpu_ids) if len(opt.gpu_ids)>0 else net
 
